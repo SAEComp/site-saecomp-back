@@ -21,6 +21,9 @@
 ## Environment and tools
 
 `Adicionar lista de dependências e softwares utilizados para a executção deste projeto.`
+node.js
+npm
+dotenvx
 
 ## Steps to run and debug
 `Resumir como alguém pode executar este projeto`
