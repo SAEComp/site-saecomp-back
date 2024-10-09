@@ -15,6 +15,7 @@ exemplo de requisicao de criacao
 exemplo de requisicao de edicao
 {
     "id": "1234",
+    "teacher": ""
     "rating": 5,
     "text": "ok"
 }
@@ -22,8 +23,17 @@ exemplo de requisicao de edicao
 exemplo de requisicao de exclusao
 {
     "id": "1234",
+    "teacher": "fosorio",
 }
 */
+
+//teacher / fosorio / courses / icc1 / feedback -> user, rating, text, date
+//                            / ed1 / feedback -> user, rating, text, date
+//teacher / simone / courses / ta1 / feedback -> user, rating, text, date
+//                           / ta2 / feedback -> user, rating, text, date
+
+//novo modelo
+//teacher/ fosorio / feedback -> user, teacher, course, rating, text, createdAt, updatedAt, deletedAt
 
 //melhorar a tipagem do código
 
@@ -45,14 +55,13 @@ exemplo de requisicao de exclusao
 //mostrar a nota do prof também, bastaria filtrar pelo prof todos os feedbacks. Único problema que vejo é como armazenar a
 //descrição do professor, mas sinceramente, ela é necessária?
 
-//CALCULAR NOTA DO PROFESSOR SOMENTE QUANDO FOR PEDIDO EM UMA REQUEST
-
 //!!! OUTRO PROBLEMA !!!
 //Como exibir para o usuário somente os profs dos quais temos aula e como mostrar somente as matérias as quais esse professor
 //dá aula? armazenar isso em outra coleção do db?
 
 export async function createFeedback(req: Request, res: Response) {
     try {
+        const teacherName: string = req.body.teacher;
         const colRef = collection(db, "feedback");
 
         //por enquanto o aluno so faz uma avaliacao por disciplina uma unica vez
@@ -68,11 +77,14 @@ export async function createFeedback(req: Request, res: Response) {
                 user: req.body.user,
                 teacher: req.body.teacher,
                 course: req.body.course,
+                rating: req.body.rating,
                 text: req.body.text,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 deleted: false
             });
+            
+            updateRating(teacherName);
 
             return res.status(201).send("Avaliação criada com sucesso!");
         }
@@ -89,8 +101,9 @@ export async function createFeedback(req: Request, res: Response) {
 
 export async function updateFeedback(req: Request, res: Response) {
     try {
+        const teacherName: string = req.body.teacher;
         const docId:string = req.body.id;
-        const docRef = doc(db, "feedback", `${docId}`);
+        const docRef = doc(db, "teacher", `${teacherName}`, "feedback", `${docId}`);
 
         //o usuario poderá editar avaliacaos apenas do periodo atual (semestre) de avaliacao
         
@@ -99,6 +112,8 @@ export async function updateFeedback(req: Request, res: Response) {
             text: req.body.text,
             updatedAt: serverTimestamp()
         });
+
+        updateRating(teacherName);
 
         return res.status(201).send("Avaliação editada com sucesso!");
     } catch (error) {
@@ -109,41 +124,21 @@ export async function updateFeedback(req: Request, res: Response) {
 
 export async function deleteFeedback(req: Request, res: Response) {
     try {
+        const teacherName: string = req.body.teacher;
         const docId:string = req.body.id;
-        const docRef = doc(db, "feedback", `${docId}`);
+        const docRef = doc(db, "teacher", `${teacherName}`, "feedback", `${docId}`);
 
         await updateDoc(docRef, {
             deleted: true,
             deletedAt: serverTimestamp()
         });
 
+        updateRating(teacherName);
+
         return res.status(200).send("Remoção concluída com sucesso!")
     } catch (error) {
         console.log(error);
         return res.status(400).send("Não foi possível concluir a remoção.");
-    }
-}
-
-export async function getFeedbackByTeacher(req: Request, res: Response) {
-    try {
-        const data: any = []; //melhorar a tipagem disso
-        //criar um tipo para feedback
-        const teacherName: string = req.body.teacher;
-        //const colRef = collectionGroup(db, "feedback");
-        const colRef = collection(db, "feedback");
-
-        const q = query(colRef, where("teacher", "==", `${teacherName}`), where("deleted", "==", false));
-        const querySnapshot = await getDocs(q);
-
-        querySnapshot.forEach((doc) => {
-            console.log(doc.id, " => ", doc.data());
-            data.push({"id" : doc.id, "data" : doc.data()});
-        });
-            
-        return res.status(200).send(data);
-    } catch (error) {
-        console.log(error);
-        return res.status(400).send("Erro ao recuperar avaliações.");
     }
 }
 
@@ -153,8 +148,7 @@ export async function getFeedbackByTeacherByCourse(req: Request, res: Response) 
         //criar um tipo para feedback
         const teacherName: string = req.body.teacher;
         const courseName: string = req.body.course;
-        //const colRef = collectionGroup(db, "feedback");
-        const colRef = collection(db, "feedback");
+        const colRef = collectionGroup(db, "feedback");
 
         const q = query(colRef, where("teacher", "==", `${teacherName}`), where("course", "==", `${courseName}`), where("deleted", "==", false));
         const querySnapshot = await getDocs(q);
@@ -176,8 +170,7 @@ export async function getFeedbackByUser(req: Request, res: Response) {
         const data: any = [];
 
         const userId: string = req.body.user;
-        //const colRef = collectionGroup(db, "feedback");
-        const colRef = collection(db, "feedback");
+        const colRef = collectionGroup(db, "feedback");
 
         const q = query(colRef, where("user", "==", `${userId}`), where("deleted", "==", false));
         const querySnapshot = await getDocs(q);
@@ -198,8 +191,7 @@ async function updateRating(teacherName: string) {
     try {
         const data: any = [];
 
-        //const colRef = collectionGroup(db, "feedback");
-        const colRef = collection(db, "feedback");
+        const colRef = collectionGroup(db, "feedback");
         
         const q = query(colRef, where("teacher", "==", `${teacherName}`), where("deleted", "==", false));
         const querySnapshot = await getDocs(q);
@@ -217,7 +209,13 @@ async function updateRating(teacherName: string) {
             //console.log("rating poś-soma: ", rating);
         }
 
-        return rating = rating/data.length;
+        rating = rating/data.length;
+        
+        const docRef = doc(db, "teacher", `${teacherName}`);
+        
+        await updateDoc(docRef, {
+            rating: rating
+        });
 
     } catch (error) {
         console.log(error);
