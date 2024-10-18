@@ -3,9 +3,14 @@ import {Router, Request, Response} from "express";
 const TestRouter = Router();
 
 TestRouter.get(
-    "/test",
+    "/health",
     (req: Request, res: Response) => {
-        res.status(200).send({message: "API Working"});
+        const healthcheck = {
+            uptime: process.uptime(),
+            message: 'OK',
+            timestamp: Date.now()
+        };
+        res.status(200).send(healthcheck);
     });
 
 export default TestRouter;

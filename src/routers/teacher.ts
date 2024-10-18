@@ -1,5 +1,3 @@
-//teacher.ts
-
 import { Router } from "express";
 import { getTeachers, getCourses, getFeedbacks, getUserFeedbacks, createFeedback, deleteFeedback, updateFeedback } from "../controllers/FeedbackController";
 

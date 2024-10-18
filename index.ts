@@ -42,6 +42,8 @@ app.use(cors({
 
 app.use("/api/", TeacherRouter);
 
+app.use("/api/", TestRouter);
+
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 //importando a porta do config
