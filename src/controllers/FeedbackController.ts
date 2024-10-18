@@ -1,223 +1,472 @@
 import { Request, Response } from "express";
-import { addDoc, collection, query, where, getDocs, updateDoc, doc, serverTimestamp, getCountFromServer, collectionGroup} from "firebase/firestore";
+import { addDoc, collection, query, where, getDocs, getDoc, updateDoc, doc, serverTimestamp, getCountFromServer, collectionGroup, orderBy, limit, startAfter } from "firebase/firestore";
 import { db } from "../../config/db/firebase_con";
+import { IBaseQuery, ITeacher, ICourse, IFeedbacksQuery, IFeedbacksResponse, IUserFeedbacksQuery, IFeedbackCreator, IFeedbackUpdater } from "../interfaces/Feedback";
+import { IFeedbacks, ITeachers, ICourses } from "../interfaces/FeedbackDatabase";
 
 /*
-exemplo de requisicao de criacao
+Proposta de organização:
+
+===> firebase <===
+-> Collection: feedbacks
 {
-    "user": "fulano",
-    "teacher": "fosorio",
-    "course": "icc1",
-    "rating": 4,
-    "text": "muito ruim"
+    userId: string;
+    teacherId: string;
+    teacherName: string;
+    courseId: string;
+    courseName: string;
+    rating: number;
+    positiveAspects: string;
+    negativeAspects: string;
+    additionalComments: string;
+    createdAt: timestamp;
+    updatedAt: timestamp;
+    deletedAt: timestamp;
+    deleted: boolean;
+}   
+
+-> Collection: teachers
+{
+    teacherName: string;
+    teacherNickname: string;
+    rating: number;
+    ratingCount: number;
+    courses: [courseId: string];
 }
 
-exemplo de requisicao de edicao
+-> Collection: courses
 {
-    "id": "1234",
-    "teacher": ""
-    "rating": 5,
-    "text": "ok"
+    courseName: string;
+    courseCode: string;
+    teachers: [teacherId: string];
 }
 
-exemplo de requisicao de exclusao
-{
-    "id": "1234",
-    "teacher": "fosorio",
+===> routes <===
+
+GET /teachers
+-> retorna os professores com avaliacoes
+query: {
+    page: number;
+    pageSize: number;
 }
+returns: 200 OK
+[
+    {
+        teacherId: string;
+        teacherName: string;
+    }
+]
+
+GET /feedbacks
+-> retorna todas as avaliações com base na query
+query: {
+    courseName: string;
+    courseId: string;
+    teacherName: string;
+    teacherId: string;
+    page: number;
+    pageSize: number;
+}
+returns: 200 OK
+[
+    {
+        feedbackId: string;
+        userId: string;
+        teacherId: string;
+        teacherName: string;
+        courseId: string;
+        courseName: string;
+        rating: number;
+        positiveAspects: string;
+        negativeAspects: string;
+        additionalComments: string;
+        createdAt: timestamp;
+        updatedAt: timestamp;
+    },
+]
+
+GET /feedbacks/:userId
+-> retorna todas as avaliações feitas por um usuário
+query: {
+    page: number;
+    pageSize: number;
+}
+returns: 200 OK
+[
+    {
+        feedbackId: string;
+        teacherId: string;
+        teacherName: string;
+        courseId: string;
+        courseName: string;
+        rating: number;
+        positiveAspects: string;
+        negativeAspects: string;
+        additionalComments: string;
+        createdAt: timestamp;
+        updatedAt: timestamp;
+    },
+]
+
+PUT /feedbacks
+-> cria uma nova avaliação
+body: {
+    userId: string;
+    teacherId: string;
+    courseId: string;
+    rating: number;
+    positiveAspects: string;
+    negativeAspects: string;
+    additionalComments: string;
+}
+returns: 201 Created
+400 Bad Request (com mensagem de erro)
+
+POST /feedbacks/:feedbackId
+-> atualiza uma avaliação
+body: {
+    rating: number;
+    positiveAspects: string;
+    negativeAspects: string;
+    additionalComments: string;
+}
+returns: 204 No Content
+400 Bad Request (com mensagem de erro)
+404 Not Found (com mensagem de erro)
+
+DELETE /feedbacks/:feedbackId
+-> apaga uma avaliação
+returns: 204 No Content
+404 Not Found (com mensagem de erro)
+
 */
 
-//teacher / fosorio / courses / icc1 / feedback -> user, rating, text, date
-//                            / ed1 / feedback -> user, rating, text, date
-//teacher / simone / courses / ta1 / feedback -> user, rating, text, date
-//                           / ta2 / feedback -> user, rating, text, date
 
-//novo modelo
-//teacher/ fosorio / feedback -> user, teacher, course, rating, text, createdAt, updatedAt, deletedAt
+export async function getTeachers(req: Request, res: Response) {
+    try {
+        const _query: IBaseQuery = {
+            lastVisible: req.query.lastVisible ? String(req.query.lastVisible) : undefined,
+            pageSize: req.query.pageSize ? Number(req.query.pageSize) : 10
+        };
+        const colRef = collectionGroup(db, "teachers");
+        let q = query(colRef, orderBy('teacherName'), limit(_query.pageSize + 1));
+        if (_query.pageSize < 0) q = query(colRef, orderBy('teacherName'));
 
-//melhorar a tipagem do código
+        if (_query.lastVisible) {
+            const lastDocRef = doc(db, `teachers/${_query.lastVisible}`);
+            const lastDoc = await getDoc(lastDocRef);
+            if (lastDoc.exists()) {
+                q = query(colRef, orderBy('teacherName'), startAfter(lastDoc), limit(_query.pageSize + 1));
+            }
+        }
+        const _docs = await getDocs(q);
+        const teachers: ITeacher[] = _docs.docs.map(doc => {
+            const _data = doc.data() as ITeachers;
+            return {
+                teacherId: doc.id,
+                teacherName: _data.teacherName,
+                rating: _data.rating
+            };
+        });
+        return res.status(200).send({
+            data: teachers,
+            lastVisible: _docs.docs.length > 1 ? _docs.docs[_docs.docs.length - 2].id : null,
+            hasNext: _docs.docs.length > _query.pageSize,
+            pageSize: _query.pageSize
+        });
 
-//IDEIAS
-//para criar periodos de avaliacao
-//criar nova colecao aux no db q possui doc chamado "feedback_period" que teria tres campos: "open"(boleano), "init"(Timestamp) e "end" (Timestamp)
-//ao fazer operacoes, checar se open == true. init e end servem para abrir e encerrar automaticamente o periodo e mudar open para false
-//desvatagem: nao guarda quais foram os periodos passados de avaliacao
-//OPCAO 2
-//criar um novo documento "feedback_period" para cada novo periodo de avaliacao aberto
-//id aleatorio, mesmos tres campos, haveria somente um doc com open == true por vez, entao fazer query buscando esse 
-//desvantagem: mais trabalho pra mim kkk
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send();
+    }
+}
 
-//!!! IDEIA INTELIGENTE !!!
-//Atualmente no db, há uma coleção de feedbacks para cada professor mas acredito que essa seja uma maneira burra de organização
-//seria mais sensato ter uma única pasta reunindo todos os feedbacks (os quais já gravam prof e disciplina) e na hora de dar
-//getfeedback basta filtrar pelo curso e/ou disciplina na requisição, isso facilitaria também as requisições de 
-//update e delete, que atualmente pedem o prof na requisição e com essa modificação pediriam somente o id do feedback. Para
-//mostrar a nota do prof também, bastaria filtrar pelo prof todos os feedbacks. Único problema que vejo é como armazenar a
-//descrição do professor, mas sinceramente, ela é necessária?
+export async function getCourses(req: Request, res: Response) {
+    try {
+        const _query: IBaseQuery = {
+            lastVisible: req.query.lastVisible ? String(req.query.lastVisible) : undefined,
+            pageSize: req.query.pageSize ? Number(req.query.pageSize) : 10
+        };
+        const colRef = collectionGroup(db, "courses");
+        let q = query(colRef, orderBy('courseName'), limit(_query.pageSize + 1));
+        if (_query.pageSize < 0) q = query(colRef, orderBy('courseName'));
 
-//!!! OUTRO PROBLEMA !!!
-//Como exibir para o usuário somente os profs dos quais temos aula e como mostrar somente as matérias as quais esse professor
-//dá aula? armazenar isso em outra coleção do db?
+        if (_query.lastVisible) {
+            const lastDocRef = doc(db, `courses/${_query.lastVisible}`);
+            const lastDoc = await getDoc(lastDocRef);
+            if (lastDoc.exists()) {
+                q = query(colRef, orderBy('courseName'), startAfter(lastDoc), limit(_query.pageSize + 1));
+            }
+        }
+        const _docs = await getDocs(q);
+        const courses: ICourse[] = _docs.docs.map(doc => {
+            const _data = doc.data() as ICourses;
+            return {
+                courseId: doc.id,
+                courseName: _data.courseName,
+                courseCode: _data.courseCode
+            };
+        });
+        return res.status(200).send({
+            data: courses,
+            lastVisible: _docs.docs.length > 1 ? _docs.docs[_docs.docs.length - 2].id : null,
+            hasNext: _docs.docs.length > _query.pageSize,
+            pageSize: _query.pageSize
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send();
+    }
+}
+
+export async function getFeedbacks(req: Request, res: Response) {
+    try {
+        const _query: IFeedbacksQuery = {
+            lastVisible: req.query.lastVisible ? String(req.query.lastVisible) : undefined,
+            pageSize: req.query.pageSize ? Number(req.query.pageSize) : 10,
+            courseName: req.query.courseName ? String(req.query.courseName) : undefined,
+            courseId: req.query.courseId ? String(req.query.courseId) : undefined,
+            teacherName: req.query.teacherName ? String(req.query.teacherName) : undefined,
+            teacherId: req.query.teacherId ? String(req.query.teacherId) : undefined,
+        }
+        const colRef = collectionGroup(db, "feedbacks");
+
+        let queryArgs = [];
+
+        if (_query.courseId) queryArgs.push(where('courseId', '==', _query.courseId));
+        else if (_query.courseName) queryArgs.push(where('courseName', '==', _query.courseName));
+
+
+        if (_query.teacherId) queryArgs.push(where('teacherId', '==', _query.teacherId));
+        else if (_query.teacherName) queryArgs.push(where('teacherName', '==', _query.teacherName));
+
+
+        let q = query(colRef, ...queryArgs, orderBy('createdAt', 'desc'), limit(_query.pageSize + 1));
+
+        if (_query.lastVisible) {
+            const lastDocRef = doc(db, `feedbacks/${_query.lastVisible}`);
+            const lastDoc = await getDoc(lastDocRef);
+            if (lastDoc.exists()) {
+                q = query(colRef, ...queryArgs, orderBy('createdAt'), startAfter(lastDoc), limit(_query.pageSize + 1));
+            }
+        }
+        const _docs = await getDocs(q);
+
+        const _feedbacks: IFeedbacksResponse[] = _docs.docs.map(doc => {
+            const _data = doc.data() as IFeedbacks;
+            return {
+                feedbackId: doc.id,
+                userId: String(_data.userId),
+                teacherId: String(_data.teacherId),
+                teacherName: String(_data.teacherName),
+                courseId: String(_data.courseId),
+                courseName: String(_data.courseName),
+                rating: Number(_data.rating),
+                positiveAspects: String(_data.positiveAspects),
+                negativeAspects: String(_data.negativeAspects),
+                additionalComments: String(_data.additionalComments),
+                createdAt: String(_data.createdAt),
+                updatedAt: String(_data.updatedAt)
+            }
+        });
+        return res.status(200).send({
+            data: _feedbacks,
+            lastVisible: _docs.docs.length > 1 ? _docs.docs[_docs.docs.length - 2].id : null,
+            hasNext: _docs.docs.length > _query.pageSize,
+            pageSize: _query.pageSize
+        })
+
+    }
+    catch (error) {
+        console.log(error);
+        return res.status(500).send();
+    }
+}
+
+export async function getUserFeedbacks(req: Request, res: Response) {
+    try {
+        const _query: IUserFeedbacksQuery = {
+            lastVisible: req.query.lastVisible ? String(req.query.lastVisible) : undefined,
+            pageSize: req.query.pageSize ? Number(req.query.pageSize) : 10,
+            userId: req.query.userId ? String(req.query.userId) : undefined
+        };
+        if (!_query.userId) res.status(400).send("User not found");
+
+        const colRef = collectionGroup(db, "feedbacks");
+
+
+
+        let q = query(colRef, where('userId', '==', _query.userId), orderBy('createdAt'), limit(_query.pageSize + 1));
+
+        if (_query.lastVisible) {
+            const lastDocRef = doc(db, `feedbacks/${_query.lastVisible}`);
+            const lastDoc = await getDoc(lastDocRef);
+            if (lastDoc.exists()) {
+                q = query(colRef, where('userId', '==', _query.userId), orderBy('createdAt'), startAfter(lastDoc), limit(_query.pageSize + 1));
+            }
+        }
+        const _docs = await getDocs(q);
+
+        const _feedbacks: IFeedbacksResponse[] = _docs.docs.map(doc => {
+            const _data = doc.data() as IFeedbacks;
+            return {
+                feedbackId: doc.id,
+                userId: String(_data.userId),
+                teacherId: String(_data.teacherId),
+                teacherName: String(_data.teacherName),
+                courseId: String(_data.courseId),
+                courseName: String(_data.courseName),
+                rating: Number(_data.rating),
+                positiveAspects: String(_data.positiveAspects),
+                negativeAspects: String(_data.negativeAspects),
+                additionalComments: String(_data.additionalComments),
+                createdAt: String(_data.createdAt),
+                updatedAt: String(_data.updatedAt)
+            }
+        });
+        return res.status(200).send({
+            data: _feedbacks,
+            lastVisible: _docs.docs.length > 1 ? _docs.docs[_docs.docs.length - 2].id : null,
+            hasNext: _docs.docs.length > _query.pageSize,
+            pageSize: _query.pageSize
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send();
+    }
+}
+
 
 export async function createFeedback(req: Request, res: Response) {
     try {
-        const teacherName: string = req.body.teacher;
-        const colRef = collection(db, "feedback");
+        if (req.body.userId === undefined) return res.status(400).send("Missing userId");
+        if (req.body.teacherId === undefined) return res.status(400).send("Missing teacherId");
+        if (req.body.courseId === undefined) return res.status(400).send("Missing courseId");
+        if (req.body.rating === undefined) return res.status(400).send("Missing rating");
+        if (req.body.positiveAspects === undefined) return res.status(400).send("Missing positiveAspects");
+        if (req.body.negativeAspects === undefined) return res.status(400).send("Missing negativeAspects");
+        if (req.body.additionalComments === undefined) return res.status(400).send("Missing additionalComments");
+        const _body: IFeedbackCreator = {
+            userId: req.body.userId,
+            teacherId: req.body.teacherId,
+            courseId: req.body.courseId,
+            rating: Number(req.body.rating),
+            positiveAspects: req.body.positiveAspects,
+            negativeAspects: req.body.negativeAspects,
+            additionalComments: req.body.additionalComments
+        }
+        // verficiar se o profesor existe
+        const teacherRef = doc(db, `teachers/${_body.teacherId}`);
+        const teacherDoc = await getDoc(teacherRef);
+        if (!teacherDoc.exists()) return res.status(404).send("Teacher not found");
+        // verificar se o curso existe
+        const courseRef = doc(db, `courses/${_body.courseId}`);
+        const courseDoc = await getDoc(courseRef);
+        if (!courseDoc.exists()) return res.status(404).send("Course not found");
 
-        //por enquanto o aluno so faz uma avaliacao por disciplina uma unica vez
-        //fazer limitacao de uma avaliacao por semestre (periodo de avalicao)
-        const userId: string = req.body.user;
-        const q = query(colRef, where("user", "==", `${userId}`), where("deleted", "==", false));
+        const colRef = collection(db, "feedbacks");
+
+        // por enquanto o aluno so faz uma avaliacao por disciplina uma unica vez
+        // fazer limitacao de uma avaliacao por semestre (periodo de avalicao)
+        const q = query(colRef, where("userId", "==", `${_body.userId}`), where("deleted", "==", false));
         const querySnapshot = getCountFromServer(q);
         const numberOfFeedbacks = (await querySnapshot).data().count;
 
-        if(numberOfFeedbacks < 1) 
-        {
+        if (numberOfFeedbacks < 1) {
             await addDoc(colRef, {
-                user: req.body.user,
-                teacher: req.body.teacher,
-                course: req.body.course,
-                rating: req.body.rating,
-                text: req.body.text,
+                user: _body.userId,
+                teacherId: _body.teacherId,
+                teacherName: teacherDoc.data().teacherName,
+                courseId: _body.courseId,
+                courseName: courseDoc.data().courseName,
+                rating: _body.rating,
+                positiveAspects: _body.positiveAspects,
+                negativeAspects: _body.negativeAspects,
+                additionalComments: _body.additionalComments,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 deleted: false
             });
-            
-            updateRating(teacherName);
+            // atualizar rating
+            const newRating = (teacherDoc.data().rating * teacherDoc.data().ratingCount + _body.rating) / (teacherDoc.data().ratingCount + 1);
+            await updateDoc(teacherRef, {
+                rating: newRating,
+                ratingCount: teacherDoc.data().ratingCount + 1
+            });
+            return res.status(201).send();
+        }
+        else {
+            return res.status(400).send("You already have a feedback for this course.");
+        }
 
-            return res.status(201).send("Avaliação criada com sucesso!");
-        }
-        else 
-        {
-            return res.status(200).send("Usuário já avaliou este professor/curso.");
-        }
-        
     } catch (error) {
         console.log(error);
-        return res.status(400).send("Deu ruim");
+        return res.status(500).send();
     }
 }
 
 export async function updateFeedback(req: Request, res: Response) {
     try {
-        const teacherName: string = req.body.teacher;
-        const docId:string = req.body.id;
-        const docRef = doc(db, "teacher", `${teacherName}`, "feedback", `${docId}`);
-
-        //o usuario poderá editar avaliacaos apenas do periodo atual (semestre) de avaliacao
-        
-        await updateDoc(docRef, {
-            rating: req.body.rating,
-            text: req.body.text,
+        const _body: IFeedbackUpdater = {
+            rating: req.body.rating ? Number(req.body.rating) : undefined,
+            positiveAspects: req.body.positiveAspects ? String(req.body.positiveAspects) : undefined,
+            negativeAspects: req.body.negativeAspects ? String(req.body.negativeAspects) : undefined,
+            additionalComments: req.body.additionalComments ? String(req.body.additionalComments) : undefined
+        }
+        const feedbackId = req.params.feedbackId;
+        const feedbackRef = doc(db, `feedback/${feedbackId}`);
+        const feedbackDoc = await getDoc(feedbackRef);
+        if (!feedbackDoc.exists()) return res.status(404).send("Feedback not found");
+        await updateDoc(feedbackRef, {
+            ..._body,
             updatedAt: serverTimestamp()
         });
+        
+        // atualizar rating 
+        if (_body.rating !== undefined) {
+            const teacherRef = doc(db, `teachers/${feedbackDoc.data().teacherId}`);
+            const teacherDoc = await getDoc(teacherRef);
+            if (!teacherDoc.exists()) return res.status(404).send("Teacher not found");
+            
+            const newRating = (teacherDoc.data().rating * teacherDoc.data().ratingCount - feedbackDoc.data().rating + _body.rating) / teacherDoc.data().ratingCount;
+            await updateDoc(teacherRef, {
+                rating: newRating
+            });
+        }
 
-        updateRating(teacherName);
-
-        return res.status(201).send("Avaliação editada com sucesso!");
+        return res.status(204).send();
     } catch (error) {
         console.log(error)
-        return res.status(400).send("Não foi possível concluir a edição.");
+        return res.status(500).send();
     }
 }
 
 export async function deleteFeedback(req: Request, res: Response) {
     try {
-        const teacherName: string = req.body.teacher;
-        const docId:string = req.body.id;
-        const docRef = doc(db, "teacher", `${teacherName}`, "feedback", `${docId}`);
+        const feedbackId = req.params.feedbackId;
+        const feedbackRef = doc(db, `feedback/${feedbackId}`);
+        const feedbackDoc = await getDoc(feedbackRef);
+        if (!feedbackDoc.exists()) return res.status(404).send("Feedback not found");
 
-        await updateDoc(docRef, {
+        await updateDoc(feedbackRef, {
             deleted: true,
             deletedAt: serverTimestamp()
         });
-
-        updateRating(teacherName);
-
-        return res.status(200).send("Remoção concluída com sucesso!")
-    } catch (error) {
-        console.log(error);
-        return res.status(400).send("Não foi possível concluir a remoção.");
-    }
-}
-
-export async function getFeedbackByTeacherByCourse(req: Request, res: Response) {
-    try {
-        const data: any = []; //melhorar a tipagem disso
-        //criar um tipo para feedback
-        const teacherName: string = req.body.teacher;
-        const courseName: string = req.body.course;
-        const colRef = collectionGroup(db, "feedback");
-
-        const q = query(colRef, where("teacher", "==", `${teacherName}`), where("course", "==", `${courseName}`), where("deleted", "==", false));
-        const querySnapshot = await getDocs(q);
-
-        querySnapshot.forEach((doc) => {
-            console.log(doc.id, " => ", doc.data());
-            data.push({"id" : doc.id, "data" : doc.data()});
-        });
-            
-        return res.status(200).send(data);
-    } catch (error) {
-        console.log(error);
-        return res.status(400).send("Erro ao recuperar avaliações.");
-    }
-}
-
-export async function getFeedbackByUser(req: Request, res: Response) {
-    try {
-        const data: any = [];
-
-        const userId: string = req.body.user;
-        const colRef = collectionGroup(db, "feedback");
-
-        const q = query(colRef, where("user", "==", `${userId}`), where("deleted", "==", false));
-        const querySnapshot = await getDocs(q);
-
-        querySnapshot.forEach((doc) => {
-            console.log(doc.id, " => ", doc.data());
-            data.push({"id" : doc.id, "data" : doc.data()});
-        });
-            
-        return res.status(200).send(data);
-    } catch (error) {
-        console.log(error);
-        return res.status(400).send("Erro ao recuperar avaliações.");
-    }
-}
-
-async function updateRating(teacherName: string) {
-    try {
-        const data: any = [];
-
-        const colRef = collectionGroup(db, "feedback");
-        
-        const q = query(colRef, where("teacher", "==", `${teacherName}`), where("deleted", "==", false));
-        const querySnapshot = await getDocs(q);
-        
-        let rating: number = 0;
-
-        querySnapshot.forEach((doc) => {
-            data.push(doc.data());
+        // atualizar rating
+        const teacherRef = doc(db, `teachers/${feedbackDoc.data().teacherId}`);
+        const teacherDoc = await getDoc(teacherRef);
+        if (!teacherDoc.exists()) return res.status(404).send("Teacher not found");
+        const newRating = (teacherDoc.data().rating * teacherDoc.data().ratingCount - feedbackDoc.data().rating) / teacherDoc.data().ratingCount;
+        await updateDoc(teacherRef, {
+            rating: newRating,
+            ratingCount: teacherDoc.data().ratingCount - 1
         });
 
-        for (let i = 0; i < data.length; i++) {
-            //console.log("atual rating: ", rating);
-            //console.log("data[i] rating: ", data[i].rating);
-            rating += data[i].rating;
-            //console.log("rating poś-soma: ", rating);
-        }
-
-        rating = rating/data.length;
-        
-        const docRef = doc(db, "teacher", `${teacherName}`);
-        
-        await updateDoc(docRef, {
-            rating: rating
-        });
-
+        return res.status(204).send()
     } catch (error) {
         console.log(error);
+        return res.status(500).send();
     }
 }

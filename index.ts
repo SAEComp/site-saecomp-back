@@ -2,8 +2,32 @@ require('@dotenvx/dotenvx').config();
 import express from "express";
 import cors from "cors";
 import config from "config";
-import TestRouter from "./src/routes/test";
-import TeacherRouter from "./src/routes/teacher";
+import TestRouter from "./src/routers/test";
+import TeacherRouter from "./src/routers/teacher";
+import swaggerJSDoc, { Options } from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+
+const swaggerDefinition = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Feedback API',
+    version: '1.0.0',
+  },
+  servers: [
+    {
+      url: '/api',
+    },
+  ],
+};
+
+const options: Options = {
+  swaggerDefinition,
+  apis: ['./src/routers/*.ts'],
+};
+
+const swaggerSpec = swaggerJSDoc(options);
+
+
 
 //instância da apliacação
 const app = express();
@@ -16,8 +40,9 @@ app.use(cors({
     origin: process.env.ORIGIN_URL 
 }));
 
-app.use("/api/", TestRouter);
-app.use("/api/teacher", TeacherRouter);
+app.use("/api/", TeacherRouter);
+
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 //importando a porta do config
 const port = config.get<number>("port");
