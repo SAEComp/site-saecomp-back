@@ -1,4 +1,4 @@
-require('@dotenvx/dotenvx').config();
+require('dotenv').config()
 import express from "express";
 import cors from "cors";
 import config from "config";
@@ -22,7 +22,10 @@ const swaggerDefinition = {
 
 const options: Options = {
   swaggerDefinition,
-  apis: ['./src/routers/*.ts'],
+  apis: [
+    './src/controllers/*.ts',
+    './src/routers/*.ts'
+  ],
 };
 
 const swaggerSpec = swaggerJSDoc(options);
