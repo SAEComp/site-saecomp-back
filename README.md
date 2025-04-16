@@ -59,7 +59,7 @@ git push origin feature/<nome-da-feature>
 5. **Caso o PR seja aprovado, faça merge na main**
 
 <p align="center"> 
-© <a href="saecomp@usp.br">SAEComp</a> <3 
+© <a href="mailto:saecomp@usp.br">SAEComp</a> <3 
 <br>
 Secretaria Acadêmica da Engenharia de Computação | USP São Carlos
 </p>
