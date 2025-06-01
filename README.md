@@ -5,19 +5,20 @@
 ## Como rodar para desenvolvimento
 Adicionar .env com:
 ```ini
-API_KEY=""
-AUTH_DOMAIN=""
-PROJECT_ID=""
-STORAGE_BUCKET=""
-MESSAGING_SENDER_ID=""
-APP_ID=""
-MEASUREMENT_ID=""
-ORIGIN_URL=http://localhost:3000
+PORT=3000
+DB_HOST=localhost
+DB_PORT=5433
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=saecomp
 ```
 
 `npm install`
 
 `npm run dev`
+
+Para rodar o db de testes:
+`docker compose up`
 
 A documentação vai estar disponível em http://localhost:3000/api/docs
 
