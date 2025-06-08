@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
 
-const TestRouter = Router();
+const healthRouter = Router();
 
-TestRouter.get(
-    "/health",
+healthRouter.get(
+    "/",
     (req: Request, res: Response) => {
         const healthcheck = {
             uptime: process.uptime(),
@@ -13,4 +13,4 @@ TestRouter.get(
         res.status(200).send(healthcheck);
     });
 
-export default TestRouter;
+export default healthRouter;

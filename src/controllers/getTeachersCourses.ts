@@ -6,7 +6,7 @@ import getTeachersCoursesData from "../repositories/getTeachersCoursesData";
 
 /**
  * @swagger
- * /evaluation/teachers-courses:
+ * /eval/teachers-courses:
  *   get:
  *     summary: Retorna a relação curso-professor
  *     tags: [Evaluation]
