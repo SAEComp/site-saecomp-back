@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from "express";
-import TestRouter from "./routers/test";
+import healthRouter from "./routers/healthRouter";
 import closedRouter from "./routers/closedRouter";
 import corsMiddleware from "./middlewares/cors";
 import { swaggerSpec } from "./docs/config";
@@ -26,13 +26,13 @@ app.use(corsMiddleware);
 
 // ================= routers ================= //
 
-app.use("/api/", TestRouter);
+app.use("/api/eval/health", healthRouter);
 
-app.use('/api/docs', authenticate, adminRoute, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api/eval/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use("/api/", authenticate, closedRouter);
+app.use("/api/eval", authenticate, closedRouter);
 
 
 app.listen(port, () => {
-  console.log(`serving on http://localhost:${port}`);
+    console.log(`serving on http://localhost:${port}`);
 });

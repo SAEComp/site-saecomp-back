@@ -3,6 +3,6 @@ import getTeachersCourses from "../controllers/getTeachersCourses";
 
 const closedRouter = Router();
 
-closedRouter.get("/evaluation/teachers-courses", getTeachersCourses);
+closedRouter.get("/teachers-courses", getTeachersCourses);
 
 export default closedRouter;
