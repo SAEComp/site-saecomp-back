@@ -1,7 +1,3 @@
-create database saecomp;
-
-\c saecomp
-
 create type user_role as enum ('admin','user');
 create type evaluation_status as enum ('approved', 'rejected', 'pending');
 create type answer_type as enum ('numeric','text');

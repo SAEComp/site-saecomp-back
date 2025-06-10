@@ -1,12 +1,13 @@
+# Dentro do arquivo docker-compose.yml
 services:
   db:
     image: postgres:16
     container_name: saecomp-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: saecomp_user   
+      POSTGRES_PASSWORD: saecomp_pass 
+      POSTGRES_DB: saecomp          
     ports:
       - "5433:5432"
     volumes:
