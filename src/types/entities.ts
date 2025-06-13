@@ -33,8 +33,8 @@ export interface Question {
   question: string;
   type: AnswerType;
   active: boolean;
-  question_order: number | null;
-  is_score: boolean;
+  order: number | null;
+  isScore: boolean;
 }
 
 export interface Evaluation {
@@ -56,4 +56,61 @@ export interface Answer {
     answer: string | null;
     edited_answer: string | null;
     edited_by: number | null;
+}
+
+export interface PublicAnswer {
+    evaluationId: number;
+    teacherName: string;
+    teacherId: number;
+    courseName: string;
+    courseCode: string;
+    score: number | null;
+}
+
+export interface PublicEvaluationDetails {
+    evaluationId: number;
+    teacherName: string;
+    teacherId: number;
+    courseName: string;
+    courseCode: string;
+    courseId: number;
+    instituteName: string;
+    instituteCode: string;
+    departmentName: string;
+    departmentCode: string;
+}
+
+export interface PublicAnswerDetails {
+    questionId: number;
+    questionType: AnswerType;
+    question: string;
+    answer: string;
+}
+
+export interface AdminEvaluation {
+    id: number;
+    teacherName: string;
+    courseName: string;
+    courseCode: string;
+    status: EvaluationStatus;
+    semester: string;
+}
+
+export interface AdminEvaluationDetails {
+    evaluationId: number;
+    userName: string;
+    userEmail: string;
+    userNusp: string;
+    status: EvaluationStatus;
+    approvedBy: string | null;
+}
+
+export interface AdminAnswerDetails {
+    questionId: number;
+    questionType: AnswerType;
+    question: string;
+    questionOrder: number;
+    answer: string | null;
+    editedAnswer: string | null;
+    editedBy: string | null;
 }

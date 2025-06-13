@@ -1,22 +1,25 @@
 import pool from "../database/connection";
+import { IAnswer, IEvaluation } from "../schemas/evaluation.schema";
 import { Evaluation } from "../types/entities";
 
 export async function findTeachersCourses(idealYear?: number): Promise<any[]> {
     let query = `
         SELECT 
+            cl.id as "classId",
             t.id as "teacherId", 
             t.name as "teacherName", 
             c.id as "courseId", 
             c.name as "courseName", 
             c.code as "courseCode"
-        FROM teachers_courses tc
-        JOIN teachers t ON t.id = tc.teacher_id
-        JOIN courses c ON c.id = tc.course_id
+        FROM classes cl
+        JOIN teachers t ON t.id = cl.teacher_id
+        JOIN courses c ON c.id = cl.course_id
+        JOIN semesters s ON s.id = cl.semester_id
     `;
     const params: any[] = [];
-    
+
     if (idealYear) {
-        query += " WHERE tc.ideal_year = $1";
+        query += " WHERE cl.ideal_year = $1";
         params.push(idealYear);
     } else {
         // Lógica para pegar o semestre atual
@@ -24,8 +27,9 @@ export async function findTeachersCourses(idealYear?: number): Promise<any[]> {
         const year = now.getFullYear();
         const month = now.getMonth(); // 0-11
         const semester = month < 6 ? 1 : 2; // Semestre 1 (Jan-Jun), Semestre 2 (Jul-Dec)
-        query += ` WHERE tc.semester = $1`;
-        params.push(`${year}-${semester}`);
+        query += ` WHERE s.code = $1`;
+        // params.push(`${year}-${semester}`);
+        params.push(`2024-2`);
     }
 
     const { rows } = await pool.query(query, params);
@@ -33,45 +37,47 @@ export async function findTeachersCourses(idealYear?: number): Promise<any[]> {
 }
 
 
-export async function checkTeacherCourseLinkExists(teacherId: number, courseId: number): Promise<boolean> {
-    const query = 'SELECT 1 FROM teachers_courses WHERE teacher_id = $1 AND course_id = $2 LIMIT 1';
-    const { rows } = await pool.query(query, [teacherId, courseId]);
-    return rows.length > 0;
+export async function checkIfClassExists(classes: { classId: number }[]): Promise<boolean> {
+    if (classes.length === 0) return true;
+
+    const ids = [...new Set(classes.map(({ classId }) => classId))];
+
+    const query = `
+    SELECT COUNT(*)::int AS found
+    FROM classes
+    WHERE id = ANY($1::int[])
+  `;
+    const { rows } = await pool.query(query, [ids]);
+
+    return rows[0].found === ids.length;
 }
 
-export async function createEvaluationAndAnswers(data: {
-    userId: number;
-    teacherId: number;
-    courseId: number;
-    score: number | null;
-    answers: { questionId: number; answer: string; order: number; }[];
-  }) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-  
-      const evalQuery = `
-        INSERT INTO evaluations (user_id, teacher_id, course_id, score)
-        VALUES ($1, $2, $3, $4)
+export async function createEvaluation(
+    userId: number,
+    evaluation: Omit<IEvaluation, 'answers'> & { score: number | null }
+): Promise<number> {
+    const query = `
+        INSERT INTO evaluations (user_id, class_id, score)
+        VALUES ($1, $2, $3)
         RETURNING id;
-      `;
-      const evalResult = await client.query(evalQuery, [data.userId, data.teacherId, data.courseId, data.score]);
-      const evaluationId = evalResult.rows[0].id;
-  
-      const answerQuery = `
+    `;
+    const params = [userId, evaluation.classId, evaluation.score];
+
+    const { rows } = await pool.query(query, params);
+    return rows[0].id;
+}
+
+export async function createAnswers(
+    evaluationId: number,
+    answers: (IAnswer & { order: number })[]
+): Promise<void> {
+    if (answers.length === 0) return;
+
+    const query = `
         INSERT INTO answers (evaluation_id, question_id, answer, question_order)
-        VALUES ($1, $2, $3, $4);
-      `;
-      for (const ans of data.answers) {
-        await client.query(answerQuery, [evaluationId, ans.questionId, ans.answer, ans.order]);
-      }
-  
-      await client.query('COMMIT');
-      return { evaluationId };
-    } catch (e) {
-      await client.query('ROLLBACK');
-      throw e;
-    } finally {
-      client.release();
-    }
+        VALUES ${answers.map((_, i) => `($1, $${2 * i + 2}, $${2 * i + 3}, $${2 * i + 4})`).join(', ')}
+    `;
+    const params = [evaluationId, ...answers.flatMap(ans => [ans.questionId, ans.answer, ans.order])];
+
+    await pool.query(query, params);
 }

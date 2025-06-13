@@ -1,18 +1,18 @@
 import { Router } from 'express';
-import * as adminController from '../controllers/admin.controller';
+import * as adminAnswerController from '../controllers/adminAnswer.controller';
+import * as adminQuestionController from '../controllers/adminQuestions.controller';
 
 const adminRouter = Router();
 
-// -> QUESTIONS 
-adminRouter.get('/questions', adminController.getAllQuestions);
-adminRouter.post('/questions', adminController.createQuestion);
-adminRouter.put('/questions/:id', adminController.updateQuestion);
-adminRouter.delete('/questions/:id', adminController.deleteQuestion);
 
-// -> ANSWERS 
-adminRouter.get('/answers', adminController.getAdminAnswers);
-adminRouter.get('/answer/:id', adminController.getAdminAnswerDetails);
-adminRouter.put('/answer/:id', adminController.updateAnswer);
+adminRouter.get('/questions', adminQuestionController.getAllQuestions);
+adminRouter.post('/questions', adminQuestionController.createQuestion);
+adminRouter.put('/questions/:id', adminQuestionController.updateQuestion);
+adminRouter.delete('/questions/:id', adminQuestionController.deleteQuestion);
+
+adminRouter.get('/answers', adminAnswerController.getAdminAnswers);
+adminRouter.get('/answers/:id', adminAnswerController.getAdminAnswerDetails);
+adminRouter.put('/answers/:id', adminAnswerController.updateAnswer);
 
 
 export default adminRouter;

@@ -1,10 +1,12 @@
 import pool from "../database/connection";
+import { PoolClient } from "pg";
 import { Question } from "../types/entities";
+import { ApiError } from "../errors/ApiError";
 
 // Para o formulário público
-export async function findActiveQuestions(): Promise<Partial<Question>[]> {
+export async function findActiveQuestions(): Promise<Omit<Question[], 'isScore' | 'active'>> {
     const query = `
-        SELECT id as "questionId", type as "questionType", question, question_order as "order" 
+        SELECT id, type, question, question_order as "order" 
         FROM questions 
         WHERE active = true 
         ORDER BY question_order ASC
@@ -16,11 +18,11 @@ export async function findActiveQuestions(): Promise<Partial<Question>[]> {
 // Para a página de admin
 export async function findAllQuestions(): Promise<Question[]> {
     const query = `
-        SELECT id as "questionId", type as "questionType", question, question_order as "order", active, is_score as "isScore" 
+        SELECT id, type, question, question_order as "order", active, is_score as "isScore" 
         FROM questions 
         ORDER BY active DESC, question_order ASC
     `;
-     const { rows } = await pool.query(query);
+    const { rows } = await pool.query(query);
     return rows;
 }
 
@@ -29,36 +31,60 @@ export async function findQuestionById(id: number): Promise<Question | null> {
     return rows[0] || null;
 }
 
+export async function resequenceActiveQuestions(
+    client: PoolClient,
+    priorityId: number = -1
+): Promise<void> {
+    await client.query(
+        `
+      WITH ordered AS (
+        SELECT
+          id,
+          ROW_NUMBER() OVER (
+            ORDER BY
+              question_order,
+              -- empurra a priority para cima em casos de empate
+              CASE WHEN id = $1 THEN 0 ELSE 1 END,
+              id
+          ) AS new_order
+        FROM questions
+        WHERE active = true
+      )
+      UPDATE questions q
+      SET question_order = o.new_order
+      FROM ordered o
+      WHERE q.id = o.id
+        AND q.question_order IS DISTINCT FROM o.new_order;
+      `,
+        [priorityId]
+    );
+}
+
 // Lida com a complexidade de reordenar
-export async function createQuestionAndUpdateOrder(questionData: Omit<Question, 'id'>): Promise<Question> {
+export async function createQuestion(questionData: Omit<Question, 'id'>): Promise<number> {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        if (questionData.active && questionData.question_order) {
-            // Empurra as outras perguntas para frente para dar espaço para a nova
-            await client.query(
-                `UPDATE questions SET question_order = question_order + 1 WHERE active = true AND question_order >= $1`,
-                [questionData.question_order]
-            );
-        }
-
         const insertQuery = `
             INSERT INTO questions (question, type, active, question_order, is_score)
-            VALUES ($1, $2, $3, $4, $5) RETURNING *;
+            VALUES ($1, $2, $3, $4, $5) RETURNING id;
         `;
         const { rows } = await client.query(insertQuery, [
             questionData.question,
             questionData.type,
             questionData.active,
-            questionData.active ? questionData.question_order : null,
-            questionData.is_score
+            questionData.active ? questionData.order : null,
+            questionData.isScore
         ]);
-        
-        await client.query('COMMIT');
-        return rows[0];
 
-    } catch(e) {
+        await resequenceActiveQuestions(client, rows[0].id);
+
+        await client.query('COMMIT');
+
+        return rows[0].id;
+
+    } catch (e) {
         await client.query('ROLLBACK');
         throw e;
     } finally {
@@ -67,44 +93,74 @@ export async function createQuestionAndUpdateOrder(questionData: Omit<Question, 
 }
 
 // Função para deletar ou desativar
-export async function deleteOrDeactivateQuestion(id: number): Promise<{ deleted: boolean, question?: Question }> {
-    // Verifica se existe resposta
-    const { rows } = await pool.query('SELECT 1 FROM answers WHERE question_id = $1 LIMIT 1', [id]);
-    
-    if (rows.length > 0) {
-        // Desativa
-        const updateResult = await pool.query(
-            'UPDATE questions SET active = false, question_order = NULL WHERE id = $1 RETURNING *',
-            [id]
-        );
-        return { deleted: false, question: updateResult.rows[0] };
-    } else {
-        // Deleta
-        await pool.query('DELETE FROM questions WHERE id = $1', [id]);
-        return { deleted: true };
+export async function deleteOrDeactivateQuestion(id: number): Promise<{ deleted: boolean }> {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        // Verifica se existe resposta
+        const { rows } = await client.query('SELECT 1 FROM answers WHERE question_id = $1 LIMIT 1', [id]);
+
+        if (rows.length > 0) {
+            // Desativa
+            const updateResult = await client.query(
+                'UPDATE questions SET active = false, question_order = NULL WHERE id = $1',
+                [id]
+            );
+        } else {
+            await client.query('DELETE FROM questions WHERE id = $1', [id]);
+        }
+
+        await resequenceActiveQuestions(client);
+        await client.query('COMMIT');
+        return { deleted: rows.length === 0 };
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    } finally {
+        client.release();
     }
+
 }
 
-export async function updateQuestion(id: number, data: Partial<Omit<Question, 'id'>>) {
-  const fields = Object.keys(data);
-  // @ts-ignore
-  const values = Object.values(data);
+export async function updateQuestion(
+    id: number,
+    data: Partial<Omit<Question, "id">>
+): Promise<Question> {
+    const client = await pool.connect();
 
-  if (fields.length === 0) {
-    return findQuestionById(id); // Retorna a questão atual se não houver nada para atualizar
-  }
+    try {
+        await client.query("BEGIN");
 
-  const setClauses = fields
-    .map((field, index) => `"${field}" = $${index + 1}`)
-    .join(', ');
+        const updateQuery = `
+            UPDATE questions
+            SET question = COALESCE($1, question),
+                type = COALESCE($2, type),
+                active = COALESCE($3, active),
+                question_order = COALESCE($4, question_order),
+                is_score = COALESCE($5, is_score)
+            WHERE id = $6
+            RETURNING id, question, type, active, question_order as "order", is_score as "isScore";
+        `;
+        const { rows } = await client.query(updateQuery, [
+            data.question,
+            data.type,
+            data.active,
+            data.order,
+            data.isScore,
+            id
+        ]);
+        if (rows.length === 0) {
+            throw new ApiError(404, "Pergunta não encontrada.");
+        }
+        const updated = rows[0];
+        await resequenceActiveQuestions(client, updated.id);
 
-  const query = `
-    UPDATE questions
-    SET ${setClauses}
-    WHERE id = $${fields.length + 1}
-    RETURNING *;
-  `;
-
-  const { rows } = await pool.query(query, [...values, id]);
-  return rows[0] || null;
+        await client.query("COMMIT");
+        return updated;
+    } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+    } finally {
+        client.release();
+    }
 }

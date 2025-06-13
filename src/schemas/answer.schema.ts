@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 // Validação para a query string de /admin/answers
 export const getAdminAnswersSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().default(10),
+  page: z.coerce.number().int().positive().optional().default(1),
+  pageSize: z.coerce.number().int().positive().optional().default(10),
   teacherId: z.coerce.number().int().positive().optional(),
   courseId: z.coerce.number().int().positive().optional(),
   status: z.enum(['approved', 'rejected', 'pending']).optional(),
