@@ -1,8 +1,8 @@
 import pool from "../database/connection";
-import { IAnswer, IEvaluation } from "../schemas/evaluation.schema";
-import { Evaluation } from "../types/entities";
+import { IAnswer, IEvaluation } from "../schemas/input/evaluation.schema";
+import { Classes } from "../schemas/output/evaluation.schema";
 
-export async function findTeachersCourses(idealYear?: number): Promise<any[]> {
+export async function findClasses(idealYear?: number): Promise<Classes[]> {
     let query = `
         SELECT 
             cl.id as "classId",
@@ -32,7 +32,7 @@ export async function findTeachersCourses(idealYear?: number): Promise<any[]> {
         params.push(`2024-2`);
     }
 
-    const { rows } = await pool.query(query, params);
+    const { rows } = await pool.query<Classes>(query, params);
     return rows;
 }
 

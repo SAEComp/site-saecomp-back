@@ -26,32 +26,32 @@ function verifyAccessToken(token: string): IAccessTokenPayload | null {
 }
 
 function authenticate(req: Request, res: Response, next: NextFunction): void {
-    req.userId = 1;
-    req.userRole = 'admin';
-    next();
-    return;
-    // const authHeader = req.headers.authorization;
+    // req.userId = 1;
+    // req.userRole = 'admin';
+    // next();
+    // return;
+    const authHeader = req.headers.authorization;
 
-    // if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    //     res.status(401).json({ error: 'Invalid token' });
-    //     return;
-    // }
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        res.status(401).json({ error: 'Invalid token' });
+        return;
+    }
 
-    // const token = authHeader.split(' ')[1];
+    const token = authHeader.split(' ')[1];
 
-    // try {
-    //     const payload = verifyAccessToken(token);
-    //     if (!payload) {
-    //         res.status(401).json({ error: 'Invalid or expired token' });
-    //         return;
-    //     }
-    //     req.userId = Number(payload.sub);
-    //     req.userRole = payload.role;
-    //     next();
-    // } catch (err) {
-    //     res.status(401).json({ error: 'Invalid or expired token' });
-    //     return;
-    // }
+    try {
+        const payload = verifyAccessToken(token);
+        if (!payload) {
+            res.status(401).json({ error: 'Invalid or expired token' });
+            return;
+        }
+        req.userId = Number(payload.sub);
+        req.userRole = payload.role;
+        next();
+    } catch (err) {
+        res.status(401).json({ error: 'Invalid or expired token' });
+        return;
+    }
 }
 
 export default authenticate;

@@ -5,14 +5,13 @@ const healthRouter = Router();
 
 healthRouter.get(
     "/",
-    (req: Request, res: Response) => {
-        pool.query('SELECT 1').catch((err) => {
+    async (req: Request, res: Response) => {
+        try {
+            await pool.query('SELECT 1')
+        } catch (err) {
             console.error('Database connection error:', err);
-            return res.status(500).send({
-                message: 'Database connection error',
-                error: err.message
-            });
-        });
+            return res.status(500).send();
+        }
         const healthcheck = {
             uptime: process.uptime(),
             message: 'OK',

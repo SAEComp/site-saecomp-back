@@ -1,6 +1,7 @@
-import { IEvaluation } from "../schemas/evaluation.schema";
+import { IEvaluation } from "../schemas/input/evaluation.schema";
 import * as evaluationRepo from '../repositories/evaluation.repository';
 import * as questionRepo from '../repositories/question.repository';
+import { ApiError } from "../errors/ApiError";
 
 async function createEvaluationsService(evaluations: IEvaluation[], userId: number) {
     const activeQuestions = await questionRepo.findAllQuestions();
@@ -11,12 +12,12 @@ async function createEvaluationsService(evaluations: IEvaluation[], userId: numb
 
         const answersWithOrder = ev.answers.map(ans => {
             const questionDetails = activeQuestions.find(q => q.id === ans.questionId);
-            if (!questionDetails) throw new Error(`Question with ID ${ans.questionId} not found.`);
-            if (!questionDetails.active || !questionDetails.order === null) throw new Error(`Question with ID ${ans.questionId} is not active.`);
+            if (!questionDetails) throw new ApiError(404, `Pergunta com ID ${ans.questionId} não encontrada.`);
+            if (!questionDetails.active || !questionDetails.order === null) throw new ApiError(400, `Pergunta com ID ${ans.questionId} não está ativa ou não possui ordem definida.`);
 
             if (questionDetails.isScore) {
                 const answerScore = Number(ans.answer);
-                if (isNaN(answerScore)) throw new Error(`Invalid score for question ID ${ans.questionId}: ${ans.answer}`);
+                if (isNaN(answerScore)) throw new ApiError(400, `Resposta para a pergunta com ID ${ans.questionId} não é um número válido.`);
 
                 totalScore += answerScore;
                 scoreQuestionCount++;

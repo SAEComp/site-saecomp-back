@@ -1,6 +1,6 @@
 import pool from "../database/connection";
 import { PoolClient } from "pg";
-import { Question } from "../types/entities";
+import { Question } from "../schemas/output/adminQuestions.schema";
 import { ApiError } from "../errors/ApiError";
 
 // Para o formulário público

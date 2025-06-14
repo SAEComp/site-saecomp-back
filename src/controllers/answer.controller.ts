@@ -4,23 +4,24 @@ import { Request, Response } from "express";
 import * as answerRepo from '../repositories/answer.repository';
 
 // Schemas de Validação
-import { evaluationIdParamSchema } from "../schemas/evaluation.schema";
-import { getPublicAnswersSchema } from "../schemas/answer.schema";
+import { getPublicAnswersInSchema, getPublicAnswerDetailsParamInSchema } from "../schemas/input/answer.schema";
 import { ApiError } from "../errors/ApiError";
+import { getPublicAnswersOutSchema, getPublicAnswerDetailsOutSchema } from "../schemas/output/answer.schema";
 
-
-// GET /answers
+// GET /api/evaluation/answers
 export async function getPublicAnswers(req: Request, res: Response) {
-    const queryParams = getPublicAnswersSchema.parse(req.query);
+    const queryParams = getPublicAnswersInSchema.parse(req.query);
     const result = await answerRepo.findPublicAnswers(queryParams);
-    res.status(200).json(result);
+    console.log('Public answers result:', result);
+    res.status(200).json(getPublicAnswersOutSchema.parse(result));
 }
 
-// GET /answers/:id
+// GET /api/evaluation/answers/:id
 export async function getPublicAnswerDetails(req: Request, res: Response) {
-    const { id } = evaluationIdParamSchema.parse(req.params);
+    const { id } = getPublicAnswerDetailsParamInSchema.parse(req.params);
     const result = await answerRepo.findPublicAnswerDetails(id);
+    console.log('Public answer details result:', result);
 
     if (!result) throw new ApiError(404, "Avaliação não encontrada");
-    res.status(200).json(result);
+    res.status(200).json(getPublicAnswerDetailsOutSchema.parse(result));
 }

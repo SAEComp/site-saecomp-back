@@ -8,7 +8,7 @@ create table if not exists semesters (
     id serial primary key,
     year int not null,
     semester int not null check (semester in (1, 2)),
-    code char(7) not null unique,
+    code char(6) not null unique,
     unique (year, semester)
 );
 

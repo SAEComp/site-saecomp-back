@@ -1,37 +1,10 @@
 import pool from "../database/connection";
 import { ApiError } from "../errors/ApiError";
-import { AdminAnswerDetails, AdminEvaluation, AdminEvaluationDetails, PublicAnswer, PublicAnswerDetails, PublicEvaluationDetails } from "../types/entities";
+import { AdminEvaluation, AdminAnswerDetails, AdminEvaluationDetails } from "../schemas/output/adminAnswer.schema";
+import { PublicAnswer, PublicAnswerDetails, PublicEvaluationDetails } from "../schemas/output/answer.schema";
+import { GetAdminAnswersParams, UpdateAnswerPayload } from "../schemas/input/adminAnswer.schema";
+import { GetPublicAnswersParams } from "../schemas/input/answer.schema";
 
-// =================== INTERFACES DE TIPAGEM (A CORREÇÃO ESTÁ AQUI) ===================
-// Todas as interfaces necessárias precisam estar definidas no topo do arquivo.
-
-interface GetAdminAnswersParams {
-    page: number;
-    pageSize: number;
-    teacherId?: number;
-    courseId?: number;
-    status?: 'approved' | 'rejected' | 'pending';
-    semester?: string;
-}
-
-interface UpdateAnswerPayload {
-    status?: 'approved' | 'rejected' | 'pending';
-    answers?: {
-        questionId: number;
-        editedAnswer: string | null;
-    }[];
-}
-
-// ESTA INTERFACE ESTAVA FALTANDO NO SEU ARQUIVO
-interface GetPublicAnswersParams {
-    page: number;
-    pageSize: number;
-    teacherId?: number;
-    courseId?: number;
-}
-
-
-// =================== FUNÇÕES DO REPOSITÓRIO ===================
 
 export async function findAdminAnswers(params: GetAdminAnswersParams) {
     const { page, pageSize, teacherId, courseId, status, semester } = params;
@@ -169,7 +142,7 @@ export async function findPublicAnswers(params: GetPublicAnswersParams) {
     const listQuery = `
     SELECT
       e.id AS "evaluationId", t.name AS "teacherName", t.id AS "teacherId",
-      c.name AS "courseName", c.code AS "courseCode", e.score
+      c.name AS "courseName", c.code AS "courseCode", e.score::FLOAT AS "score"
     FROM evaluations e
     JOIN classes cl ON cl.id = e.class_id
     JOIN teachers t ON cl.teacher_id = t.id

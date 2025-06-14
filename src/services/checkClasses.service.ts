@@ -1,5 +1,5 @@
 import { checkIfClassExists } from "../repositories/evaluation.repository";
-import { IEvaluation } from "../schemas/evaluation.schema";
+import { IEvaluation } from "../schemas/input/evaluation.schema";
 
 
 function checkClasses(evaluations: IEvaluation[]) {

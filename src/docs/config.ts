@@ -1,38 +1,37 @@
-import swaggerJSDoc, { Options } from 'swagger-jsdoc';
+import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import { registry } from './registry';
 
-const swaggerDefinition = {
-    openapi: '3.0.0',
+import { registerAdminAnswerRoutesDocs } from './openapi/adminAnswer.openapi';
+import { registerAdminQuestionRoutesDocs } from './openapi/adminQuestion.openapi';
+import { registerPublicAnswerRoutesDocs } from './openapi/answer.openapi';
+import { registerEvaluationRoutesDocs } from './openapi/evaluation.openapi';
+
+registry.registerComponent('securitySchemes', 'bearerAuth', {
+    type: 'http',
+    scheme: 'bearer',
+    bearerFormat: 'JWT',
+});
+
+
+registerAdminAnswerRoutesDocs();
+registerAdminQuestionRoutesDocs();
+registerPublicAnswerRoutesDocs();
+registerEvaluationRoutesDocs();
+
+const generator = new OpenApiGeneratorV31(registry.definitions);
+
+export const openApiDoc = generator.generateDocument({
+    openapi: '3.1.0',
     info: {
-        title: 'Teacher evaluation API',
+        title: 'Teacher Evaluation API',
         version: '1.0.0',
     },
     servers: [
-        {
-            url: '/api',
-        },
+        { url: '/api/evaluation' }
     ],
-    components: {
-        securitySchemes: {
-            bearerAuth: {
-                type: 'http',
-                scheme: 'bearer',
-                bearerFormat: 'JWT',
-            },
-        },
-    },
     security: [
         {
             bearerAuth: [],
         },
     ],
-};
-
-const options: Options = {
-    swaggerDefinition,
-    apis: [
-        './src/controllers/*.ts',
-        './src/routers/*.ts'
-    ],
-};
-
-export const swaggerSpec = swaggerJSDoc(options);
+});

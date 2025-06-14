@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
-export const getTeachersCoursesSchema = z.object({
+export const getClassesInSchema = z.object({
     idealYear: z.coerce.number().int().gte(0).optional()
 });
-
 
 const answerSchema = z.object({
     questionId: z.number().int().positive(),
@@ -19,12 +18,10 @@ const evaluationSchema = z.object({
 
 export type IEvaluation = z.infer<typeof evaluationSchema>;
 
-export const createEvaluationSchema = z.object({
+export const createEvaluationInSchema = z.object({
     nusp: z.string().regex(/^[0-9]{7,8}$/, "NUSP inválido"),
     evaluations: z.array(evaluationSchema).min(1, "É necessário enviar ao menos uma avaliação."),
 });
-
-
 
 export const evaluationIdParamSchema = z.object({
     id: z.coerce.number().int().positive("O ID da avaliação deve ser um número inteiro positivo."),
