@@ -3,7 +3,8 @@
 
 const questionTypes = [
     'text',
-    'numeric'
+    'numeric',
+    'slider'
 ] as const;
 
 export default questionTypes;
