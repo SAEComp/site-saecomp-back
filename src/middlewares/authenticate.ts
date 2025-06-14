@@ -26,6 +26,10 @@ function verifyAccessToken(token: string): IAccessTokenPayload | null {
 }
 
 function authenticate(req: Request, res: Response, next: NextFunction): void {
+    // req.userId = 1;
+    // req.userRole = 'admin';
+    // next();
+    // return;
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
