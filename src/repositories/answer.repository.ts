@@ -14,11 +14,11 @@ export async function findAdminAnswers(params: GetAdminAnswersParams) {
     let whereClauses = "WHERE 1 = 1";
 
     if (teacherId) {
-        whereClauses += ` AND e.teacher_id = $${queryParams.length + 1}`;
+        whereClauses += ` AND cl.teacher_id = $${queryParams.length + 1}`;
         queryParams.push(teacherId);
     }
     if (courseId) {
-        whereClauses += ` AND e.course_id = $${queryParams.length + 1}`;
+        whereClauses += ` AND cl.course_id = $${queryParams.length + 1}`;
         queryParams.push(courseId);
     }
     if (status) {
@@ -154,7 +154,13 @@ export async function findPublicAnswers(params: GetPublicAnswersParams) {
     const listParams = [...queryParams, pageSize + 1, offset];
     const { rows: evaluationRows } = await pool.query<PublicAnswer>(listQuery, listParams);
 
-    const scoreQuery = `SELECT AVG(e.score) as "overallScore" FROM evaluations e ${whereClauses}`;
+    const scoreQuery = `
+    SELECT AVG(e.score)::FLOAT AS "overallScore"
+    FROM evaluations e
+    JOIN classes cl ON cl.id = e.class_id
+    ${whereClauses};
+    `;
+
     const scoreResult = await pool.query(scoreQuery, queryParams);
 
     const score = scoreResult.rows[0]?.overallScore ? parseFloat(scoreResult.rows[0].overallScore) : null;
