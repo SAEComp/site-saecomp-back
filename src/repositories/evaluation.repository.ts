@@ -73,11 +73,23 @@ export async function createAnswers(
 ): Promise<void> {
     if (answers.length === 0) return;
 
+    const valuesClause = answers.map((_, i) => {
+        const offset = i * 4;
+        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`;
+    }).join(', ');
+
     const query = `
-        INSERT INTO answers (evaluation_id, question_id, answer, question_order)
-        VALUES ${answers.map((_, i) => `($1, $${2 * i + 2}, $${2 * i + 3}, $${2 * i + 4})`).join(', ')}
-    `;
-    const params = [evaluationId, ...answers.flatMap(ans => [ans.questionId, ans.answer, ans.order])];
+  INSERT INTO answers (evaluation_id, question_id, answer, question_order)
+  VALUES ${valuesClause}
+`;
+
+    const params = answers.flatMap(ans => [
+        evaluationId,
+        ans.questionId,
+        ans.answer,
+        ans.order
+    ]);
 
     await pool.query(query, params);
+
 }
