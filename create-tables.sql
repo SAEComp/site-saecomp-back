@@ -76,12 +76,10 @@ create table if not exists questions (
     active boolean not null default true,
     question_order int,
     is_score boolean not null default false,
+    required boolean,
     check (not is_score or type = 'numeric')
 );
 
-create unique index questions_active_order_idx
-    on questions(question_order)
-    where active;
 
 
 create table if not exists evaluations (

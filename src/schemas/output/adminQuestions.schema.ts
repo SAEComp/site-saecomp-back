@@ -8,6 +8,7 @@ export const questionsSchema = z.object({
     active: z.boolean(),
     order: z.number().int().positive().nullable(),
     isScore: z.boolean(),
+    required: z.boolean(),
 });
 
 export type Question = z.infer<typeof questionsSchema>;
