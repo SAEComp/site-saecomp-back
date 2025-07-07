@@ -19,7 +19,6 @@ const evaluationSchema = z.object({
 export type IEvaluation = z.infer<typeof evaluationSchema>;
 
 export const createEvaluationInSchema = z.object({
-    nusp: z.string().regex(/^[0-9]{7,8}$/, "NUSP inválido"),
     evaluations: z.array(evaluationSchema).min(1, "É necessário enviar ao menos uma avaliação."),
 });
 
