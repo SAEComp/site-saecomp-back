@@ -29,14 +29,12 @@ export async function getActiveQuestions(req: Request, res: Response) {
 
 // POST /api/evaluation/create
 export async function createEvaluation(req: Request, res: Response) {
-    const { nusp, evaluations } = createEvaluationInSchema.parse(req.body);
+    const { evaluations } = createEvaluationInSchema.parse(req.body);
     const userId = req.userId;
 
     if (!userId) throw new ApiError(401, "Usuário não autenticado");
 
     if (!await checkClasses(evaluations)) throw new ApiError(400, "Algumas avaliações não correspondem às turmas do usuário");
-
-    await userRepo.updateNusp(nusp, userId);
 
     await createEvaluationsService(evaluations, userId);
 

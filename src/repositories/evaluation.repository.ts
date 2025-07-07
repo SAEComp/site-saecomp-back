@@ -26,10 +26,9 @@ export async function findClasses(idealYear?: number): Promise<Classes[]> {
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth(); // 0-11
-        const semester = month < 6 ? 1 : 2; // Semestre 1 (Jan-Jun), Semestre 2 (Jul-Dec)
+        const semester = month < 9 && month > 3 ? 1 : 2; // Semestre 1 (Jan-Jun), Semestre 2 (Jul-Dec)
         query += ` WHERE s.code = $1`;
-        // params.push(`${year}-${semester}`);
-        params.push(`2024-2`);
+        params.push(`${year}-${semester}`);
     }
 
     const { rows } = await pool.query<Classes>(query, params);

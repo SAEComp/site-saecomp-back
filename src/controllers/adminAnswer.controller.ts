@@ -15,7 +15,6 @@ import { getAdminAnswersOutSchema, getAdminAnswerDetailsOutSchema } from '../sch
 export async function getAdminAnswers(req: Request, res: Response) {
     const queryParams = getAdminAnswersInSchema.parse(req.query);
     const result = await answerRepo.findAdminAnswers(queryParams);
-    console.log('Admin answers result:', result);
     res.status(200).json(getAdminAnswersOutSchema.parse(result));
 }
 
