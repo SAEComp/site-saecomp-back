@@ -18,7 +18,7 @@ export async function findActiveQuestions(): Promise<Omit<Question[], 'isScore' 
 // Para a página de admin
 export async function findAllQuestions(): Promise<Question[]> {
     const query = `
-        SELECT id, type, question, question_order as "order", active, is_score as "isScore" 
+        SELECT id, type, question, question_order as "order", active, required, is_score as "isScore" 
         FROM questions 
         ORDER BY active DESC, question_order ASC
     `;
