@@ -6,7 +6,7 @@ import { ApiError } from "../errors/ApiError";
 // Para o formulário público
 export async function findActiveQuestions(): Promise<Omit<Question[], 'isScore' | 'active'>> {
     const query = `
-        SELECT id, type, question, question_order as "order" 
+        SELECT id, type, question, required, question_order as "order" 
         FROM questions 
         WHERE active = true 
         ORDER BY question_order ASC
@@ -67,15 +67,16 @@ export async function createQuestion(questionData: Omit<Question, 'id'>): Promis
         await client.query('BEGIN');
 
         const insertQuery = `
-            INSERT INTO questions (question, type, active, question_order, is_score)
-            VALUES ($1, $2, $3, $4, $5) RETURNING id;
+            INSERT INTO questions (question, type, active, question_order, is_score, required)
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;
         `;
         const { rows } = await client.query(insertQuery, [
             questionData.question,
             questionData.type,
             questionData.active,
             questionData.active ? questionData.order : null,
-            questionData.isScore
+            questionData.isScore,
+            questionData.required
         ]);
 
         await resequenceActiveQuestions(client, rows[0].id);
@@ -137,8 +138,9 @@ export async function updateQuestion(
                 type = COALESCE($2, type),
                 active = COALESCE($3, active),
                 question_order = COALESCE($4, question_order),
-                is_score = COALESCE($5, is_score)
-            WHERE id = $6
+                is_score = COALESCE($5, is_score),
+                required = COALESCE($6, required)
+            WHERE id = $7
             RETURNING id, question, type, active, question_order as "order", is_score as "isScore";
         `;
         const { rows } = await client.query(updateQuery, [
@@ -147,6 +149,7 @@ export async function updateQuestion(
             data.active,
             data.order,
             data.isScore,
+            data.required,
             id
         ]);
         if (rows.length === 0) {

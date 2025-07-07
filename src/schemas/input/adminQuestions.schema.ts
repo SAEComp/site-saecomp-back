@@ -7,12 +7,13 @@ const questionObjectSchema = z.object({
     active: z.boolean(),
     order: z.number().int().positive().nullable(),
     isScore: z.boolean(),
+    required: z.boolean(),
 });
 
 export const createQuestionInSchema = questionObjectSchema.refine(
-    (data) => !data.isScore || data.type === 'numeric',
+    (data) => !data.isScore || data.type === 'numeric' || data.type === 'slider',
     {
-        message: "Perguntas que contam para a nota (isScore) devem ser do tipo 'numeric'.",
+        message: "Perguntas que contam para a nota (isScore) devem tem números.",
         path: ["isScore"],
     }
 );

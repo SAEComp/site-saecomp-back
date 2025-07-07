@@ -22,5 +22,6 @@ export const getActiveQuestionsOutSchema = z.object({
         question: z.string().min(3, "A pergunta deve ter pelo menos 3 caracteres."),
         type: z.enum(questionTypes),
         order: z.coerce.number().int().positive("A ordem da pergunta deve ser um número inteiro positivo."),
+        required: z.boolean(),
     }))
 });
