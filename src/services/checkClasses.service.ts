@@ -5,6 +5,8 @@ import { IEvaluation } from "../schemas/teacherEvaluation/input/evaluation.schem
 function checkClasses(evaluations: IEvaluation[]) {
     const teacherPairs = evaluations.map(ev => ({
         classId: ev.classId,
+        teacherId: ev.teacherId,
+        courseId: ev.courseId
     }));
 
     return checkIfClassExists(teacherPairs);

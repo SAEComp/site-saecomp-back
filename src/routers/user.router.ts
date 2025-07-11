@@ -7,6 +7,10 @@ const userRouter = Router();
 
 userRouter.get('/classes', authenticate(['evaluation:create', 'evaluation:results', 'evaluation:review']), evaluationController.getClasses);
 
+userRouter.get('/teachers', authenticate(['evaluation:create', 'evaluation:results', 'evaluation:review']), evaluationController.getTeachers);
+
+userRouter.get('/courses', authenticate(['evaluation:create', 'evaluation:results', 'evaluation:review']), evaluationController.getCourses);
+
 userRouter.get('/questions', authenticate(['evaluation:create', 'evaluation:results', 'evaluation:review']), evaluationController.getActiveQuestions);
 
 userRouter.get('/answers', authenticate(['evaluation:results']), answerController.getPublicAnswers);
