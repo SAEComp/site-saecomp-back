@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
 import jwt from 'jsonwebtoken';
+import { ApiError } from '../errors/ApiError';
 
 const accessPublicKey = fs.readFileSync(
     path.resolve(__dirname, '../../keys/access_public.pem')
@@ -9,7 +10,8 @@ const accessPublicKey = fs.readFileSync(
 
 interface IAccessTokenPayload {
     sub: string;
-    role: 'admin' | 'user';
+    role: string;
+    permissions: string[];
 }
 
 function verifyAccessToken(token: string): IAccessTokenPayload | null {
@@ -25,32 +27,30 @@ function verifyAccessToken(token: string): IAccessTokenPayload | null {
     }
 }
 
-function authenticate(req: Request, res: Response, next: NextFunction): void {
-    // req.userId = 1;
-    // req.userRole = 'admin';
-    // next();
-    // return;
-    const authHeader = req.headers.authorization;
+function authenticate(requiredPermissions?: string[]): (req: Request, res: Response, next: NextFunction) => void {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        res.status(401).json({ error: 'Invalid token' });
-        return;
-    }
+        if (!authHeader || !authHeader.startsWith('Bearer ')) throw new ApiError(401, 'Token de autenticação não fornecido ou inválido');
 
-    const token = authHeader.split(' ')[1];
+        const token = authHeader.split(' ')[1];
 
-    try {
-        const payload = verifyAccessToken(token);
-        if (!payload) {
-            res.status(401).json({ error: 'Invalid or expired token' });
-            return;
+        try {
+            const payload = verifyAccessToken(token);
+            if (!payload) throw new ApiError(401, 'Token inválido ou expirado');
+            req.userId = Number(payload.sub);
+            req.userRole = payload.role;
+            req.userPermissions = payload.permissions || [];
+            if (requiredPermissions) {
+                const hasPermission = requiredPermissions.every(permission =>
+                    req.userPermissions?.includes(permission)
+                );
+            if (!hasPermission) throw new ApiError(403, 'Acesso negado: Permissões insuficientes');
+            }
+            next();
+        } catch (err) {
+            throw new ApiError(401, 'Token inválido ou expirado');
         }
-        req.userId = Number(payload.sub);
-        req.userRole = payload.role;
-        next();
-    } catch (err) {
-        res.status(401).json({ error: 'Invalid or expired token' });
-        return;
     }
 }
 
