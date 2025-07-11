@@ -8,10 +8,8 @@ import { errorHandler } from './middlewares/errorHandler';
 import { openApiDoc } from './docs/config';
 import swaggerUi from 'swagger-ui-express';
 import cookieParser from 'cookie-parser';
-import authenticate from './middlewares/authenticate';
 import userRouter from './routers/user.router';
 import adminRouter from './routers/admin.router';
-import adminRoute from './middlewares/adminRoute';
 
 const app = express();
 const port = process.env.PORT ?? 3000;
@@ -30,9 +28,9 @@ app.use("/api/evaluation/docs/openapi.json", (req, res) => (res.json(openApiDoc)
 
 app.use('/api/evaluation/docs', swaggerUi.serve, swaggerUi.setup(openApiDoc));
 
-app.use("/api/evaluation", authenticate, userRouter);
+app.use("/api/evaluation", userRouter);
 
-app.use("/api/evaluation/admin", authenticate, adminRoute, adminRouter);
+app.use("/api/evaluation/admin", adminRouter);
 
 
 // ================= error handler ================= //
