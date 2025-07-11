@@ -1,4 +1,4 @@
-import { IEvaluation } from "../schemas/input/evaluation.schema";
+import { IEvaluation } from "../schemas/teacherEvaluation/input/evaluation.schema";
 import * as evaluationRepo from '../repositories/evaluation.repository';
 import * as questionRepo from '../repositories/question.repository';
 import { ApiError } from "../errors/ApiError";

@@ -4,12 +4,12 @@ import { registerRoute } from "../registerRoute";
 import {
     createEvaluationInSchema,
     getClassesInSchema
-} from "../../schemas/input/evaluation.schema";
+} from "../../schemas/teacherEvaluation/input/evaluation.schema";
 
 import {
     getClassesOutSchema,
     getActiveQuestionsOutSchema,
-} from "../../schemas/output/evaluation.schema";
+} from "../../schemas/teacherEvaluation/output/evaluation.schema";
 
 
 export function registerEvaluationRoutesDocs() {

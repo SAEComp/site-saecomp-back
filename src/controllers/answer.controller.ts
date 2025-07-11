@@ -4,9 +4,9 @@ import { Request, Response } from "express";
 import * as answerRepo from '../repositories/answer.repository';
 
 // Schemas de Validação
-import { getPublicAnswersInSchema, getPublicAnswerDetailsParamInSchema } from "../schemas/input/answer.schema";
+import { getPublicAnswersInSchema, getPublicAnswerDetailsParamInSchema } from "../schemas/teacherEvaluation/input/answer.schema";
 import { ApiError } from "../errors/ApiError";
-import { getPublicAnswersOutSchema, getPublicAnswerDetailsOutSchema } from "../schemas/output/answer.schema";
+import { getPublicAnswersOutSchema, getPublicAnswerDetailsOutSchema } from "../schemas/teacherEvaluation/output/answer.schema";
 
 // GET /api/evaluation/answers
 export async function getPublicAnswers(req: Request, res: Response) {

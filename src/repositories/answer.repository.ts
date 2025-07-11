@@ -1,9 +1,9 @@
 import pool from "../database/connection";
 import { ApiError } from "../errors/ApiError";
-import { AdminEvaluation, AdminAnswerDetails, AdminEvaluationDetails } from "../schemas/output/adminAnswer.schema";
-import { PublicAnswer, PublicAnswerDetails, PublicEvaluationDetails } from "../schemas/output/answer.schema";
-import { GetAdminAnswersParams, UpdateAnswerPayload } from "../schemas/input/adminAnswer.schema";
-import { GetPublicAnswersParams } from "../schemas/input/answer.schema";
+import { AdminEvaluation, AdminAnswerDetails, AdminEvaluationDetails } from "../schemas/teacherEvaluation/output/adminAnswer.schema";
+import { PublicAnswer, PublicAnswerDetails, PublicEvaluationDetails } from "../schemas/teacherEvaluation/output/answer.schema";
+import { GetAdminAnswersParams, UpdateAnswerPayload } from "../schemas/teacherEvaluation/input/adminAnswer.schema";
+import { GetPublicAnswersParams } from "../schemas/teacherEvaluation/input/answer.schema";
 
 
 export async function findAdminAnswers(params: GetAdminAnswersParams) {

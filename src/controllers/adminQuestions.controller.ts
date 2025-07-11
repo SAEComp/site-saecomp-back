@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 
 import * as questionRepo from '../repositories/question.repository';
-import { createQuestionInSchema, questionIdParamInSchema, updateQuestionInSchema } from '../schemas/input/adminQuestions.schema';
-import { getAllQuestionsOutSchema, createQuestionOutSchema, deleteQuestionOutSchema } from '../schemas/output/adminQuestions.schema';
+import { createQuestionInSchema, questionIdParamInSchema, updateQuestionInSchema } from '../schemas/teacherEvaluation/input/adminQuestions.schema';
+import { getAllQuestionsOutSchema, createQuestionOutSchema, deleteQuestionOutSchema } from '../schemas/teacherEvaluation/output/adminQuestions.schema';
 
 // GET /api/admin/questions
 export async function getAllQuestions(req: Request, res: Response) {

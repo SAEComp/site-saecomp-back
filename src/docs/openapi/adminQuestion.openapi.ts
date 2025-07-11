@@ -5,13 +5,13 @@ import {
     createQuestionInSchema,
     questionIdParamInSchema,
     updateQuestionInSchema,
-} from "../../schemas/input/adminQuestions.schema";
+} from "../../schemas/teacherEvaluation/input/adminQuestions.schema";
 
 import {
     getAllQuestionsOutSchema,
     createQuestionOutSchema,
     deleteQuestionOutSchema,
-} from "../../schemas/output/adminQuestions.schema";
+} from "../../schemas/teacherEvaluation/output/adminQuestions.schema";
 
 
 export function registerAdminQuestionRoutesDocs() {

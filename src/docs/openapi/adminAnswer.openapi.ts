@@ -5,12 +5,12 @@ import {
     getAdminAnswerDetailsParamsInSchema,
     updateAnswerInSchema,
     updateAnswerParamsInSchema,
-} from "../../schemas/input/adminAnswer.schema";
+} from "../../schemas/teacherEvaluation/input/adminAnswer.schema";
 
 import {
     getAdminAnswersOutSchema,
     getAdminAnswerDetailsOutSchema,
-} from "../../schemas/output/adminAnswer.schema";
+} from "../../schemas/teacherEvaluation/output/adminAnswer.schema";
 
 export function registerAdminAnswerRoutesDocs() {
     // GET /api/evaluation/admin/answers

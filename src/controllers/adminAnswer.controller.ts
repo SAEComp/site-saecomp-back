@@ -7,9 +7,9 @@ import {
     updateAnswerInSchema,
     getAdminAnswerDetailsParamsInSchema,
     updateAnswerParamsInSchema
-} from '../schemas/input/adminAnswer.schema';
+} from '../schemas/teacherEvaluation/input/adminAnswer.schema';
 
-import { getAdminAnswersOutSchema, getAdminAnswerDetailsOutSchema } from '../schemas/output/adminAnswer.schema';
+import { getAdminAnswersOutSchema, getAdminAnswerDetailsOutSchema } from '../schemas/teacherEvaluation/output/adminAnswer.schema';
 
 // GET /api/evaluation/admin/answers
 export async function getAdminAnswers(req: Request, res: Response) {

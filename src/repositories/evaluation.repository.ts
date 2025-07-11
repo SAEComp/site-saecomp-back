@@ -1,6 +1,6 @@
 import pool from "../database/connection";
-import { IAnswer, IEvaluation } from "../schemas/input/evaluation.schema";
-import { Classes } from "../schemas/output/evaluation.schema";
+import { IAnswer, IEvaluation } from "../schemas/teacherEvaluation/input/evaluation.schema";
+import { Classes } from "../schemas/teacherEvaluation/output/evaluation.schema";
 
 export async function findClasses(idealYear?: number): Promise<Classes[]> {
     let query = `
@@ -34,6 +34,7 @@ export async function findClasses(idealYear?: number): Promise<Classes[]> {
     const { rows } = await pool.query<Classes>(query, params);
     return rows;
 }
+
 
 
 export async function checkIfClassExists(classes: { classId: number }[]): Promise<boolean> {

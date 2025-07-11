@@ -10,9 +10,9 @@ import * as questionRepo from '../repositories/question.repository';
 import * as userRepo from '../repositories/user.repository';
 
 // Schemas de Validação
-import { createEvaluationInSchema, getClassesInSchema } from "../schemas/input/evaluation.schema";
+import { createEvaluationInSchema, getClassesInSchema } from "../schemas/teacherEvaluation/input/evaluation.schema";
 import { ApiError } from "../errors/ApiError";
-import { getClassesOutSchema, getActiveQuestionsOutSchema } from "../schemas/output/evaluation.schema";
+import { getClassesOutSchema, getActiveQuestionsOutSchema } from "../schemas/teacherEvaluation/output/evaluation.schema";
 
 // GET /api/evaluation/classes
 export async function getClasses(req: Request, res: Response) {
@@ -20,6 +20,7 @@ export async function getClasses(req: Request, res: Response) {
     const data = await evaluationRepo.findClasses(idealYear);
     res.json(getClassesOutSchema.parse({ results: data }));
 }
+
 
 // GET /api/evaluation/questions
 export async function getActiveQuestions(req: Request, res: Response) {
