@@ -1,6 +1,7 @@
 import pool from "../database/connection";
-import { IAnswer, IEvaluation } from "../schemas/input/evaluation.schema";
-import { Classes } from "../schemas/output/evaluation.schema";
+import { IAnswer, IEvaluation } from "../schemas/teacherEvaluation/input/evaluation.schema";
+import { Classes } from "../schemas/teacherEvaluation/output/evaluation.schema";
+import { Teacher, Course } from "../schemas/teacherEvaluation/output/evaluation.schema";
 
 export async function findClasses(idealYear?: number): Promise<Classes[]> {
     let query = `
@@ -35,20 +36,77 @@ export async function findClasses(idealYear?: number): Promise<Classes[]> {
     return rows;
 }
 
-
-export async function checkIfClassExists(classes: { classId: number }[]): Promise<boolean> {
-    if (classes.length === 0) return true;
-
-    const ids = [...new Set(classes.map(({ classId }) => classId))];
-
+export async function findTeachers(): Promise<Teacher[]> {
     const query = `
-    SELECT COUNT(*)::int AS found
-    FROM classes
-    WHERE id = ANY($1::int[])
-  `;
-    const { rows } = await pool.query(query, [ids]);
+        SELECT id as "teacherId", name as "teacherName"
+        FROM teachers
+        ORDER BY name ASC
+    `;
+    const { rows } = await pool.query<Teacher>(query);
+    return rows;
+}
 
-    return rows[0].found === ids.length;
+export async function findCourses(): Promise<Course[]> {
+    const query = `
+        SELECT id as "courseId", name as "courseName", code as "courseCode"
+        FROM courses
+        ORDER BY name ASC
+    `;
+    const { rows } = await pool.query<Course>(query);
+    return rows;
+}
+
+export async function checkIfClassExists(
+    classes: { classId?: number, teacherId?: number, courseId?: number }[]
+): Promise<{ classId: number, teacherId?: number, courseId?: number }[] | null> {
+    if (classes.length === 0) return [];
+
+    const result: { classId: number, teacherId?: number, courseId?: number }[] = [];
+
+    // Verifica classes já existentes
+    const ids = classes.filter(c => c.classId !== undefined).map(({ classId }) => classId);
+    if (ids.length > 0) {
+        const query = `
+            SELECT id FROM classes
+            WHERE id = ANY($1::int[])
+        `;
+        const { rows } = await pool.query<{ id: number }>(query, [ids]);
+        if (rows.length !== ids.length) return null;
+        // Adiciona ao resultado apenas o classId
+        for (const id of ids) {
+            result.push({ classId: id! });
+        }
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const semester = month < 9 && month > 3 ? 1 : 2;
+    const semesterCode = `${year}-${semester}`;
+
+    const semesterRes = await pool.query<{ id: number }>(
+        `SELECT id FROM semesters WHERE code = $1`, [semesterCode]
+    );
+    if (semesterRes.rowCount === 0) return null;
+    const semesterId = semesterRes.rows[0].id;
+
+    for (const c of classes) {
+        if (!c.classId && c.teacherId && c.courseId) {
+            const insertRes = await pool.query<{ id: number }>(
+                `INSERT INTO classes (teacher_id, course_id, semester_id) VALUES ($1, $2, $3) RETURNING id`,
+                [c.teacherId, c.courseId, semesterId]
+            );
+            result.push({
+                classId: insertRes.rows[0].id,
+                teacherId: c.teacherId,
+                courseId: c.courseId
+            });
+        } else if (!c.classId && (!c.teacherId || !c.courseId)) {
+            return null;
+        }
+    }
+
+    return result;
 }
 
 export async function createEvaluation(

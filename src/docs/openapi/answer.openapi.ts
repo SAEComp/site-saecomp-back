@@ -4,12 +4,12 @@ import { z } from "zod";
 import {
     getPublicAnswersInSchema,
     getPublicAnswerDetailsParamInSchema,
-} from "../../schemas/input/answer.schema";
+} from "../../schemas/teacherEvaluation/input/answer.schema";
 
 import {
     getPublicAnswersOutSchema,
     getPublicAnswerDetailsOutSchema,
-} from "../../schemas/output/answer.schema";
+} from "../../schemas/teacherEvaluation/output/answer.schema";
 
 
 export function registerPublicAnswerRoutesDocs() {
