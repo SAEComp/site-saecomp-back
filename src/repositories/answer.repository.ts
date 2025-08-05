@@ -142,7 +142,9 @@ export async function findPublicAnswers(params: GetPublicAnswersParams) {
     const listQuery = `
     SELECT
       e.id AS "evaluationId", t.name AS "teacherName", t.id AS "teacherId",
-      c.name AS "courseName", c.code AS "courseCode", e.score::FLOAT AS "score"
+      c.name AS "courseName", c.code AS "courseCode", e.score::FLOAT AS "score",
+        i.name AS "instituteName", i.code AS "instituteCode",
+        d.name AS "departmentName", d.code AS "departmentCode"
     FROM evaluations e
     JOIN classes cl ON cl.id = e.class_id
     JOIN teachers t ON cl.teacher_id = t.id
