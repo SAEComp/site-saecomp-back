@@ -42,7 +42,7 @@ function authenticate(requiredPermissions?: string[]): (req: Request, res: Respo
             req.userRole = payload.role;
             req.userPermissions = payload.permissions || [];
             if (requiredPermissions) {
-                const hasPermission = requiredPermissions.every(permission =>
+                const hasPermission = requiredPermissions.some(permission =>
                     req.userPermissions?.includes(permission)
                 );
             if (!hasPermission) throw new ApiError(403, 'Acesso negado: Permissões insuficientes');
