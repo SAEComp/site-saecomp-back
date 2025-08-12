@@ -143,12 +143,14 @@ export async function findPublicAnswers(params: GetPublicAnswersParams) {
     SELECT
       e.id AS "evaluationId", t.name AS "teacherName", t.id AS "teacherId",
       c.name AS "courseName", c.code AS "courseCode", e.score::FLOAT AS "score",
-        i.name AS "instituteName", i.code AS "instituteCode",
-        d.name AS "departmentName", d.code AS "departmentCode"
+      i.name AS "instituteName", i.code AS "instituteCode",
+      d.name AS "departmentName", d.code AS "departmentCode"
     FROM evaluations e
     JOIN classes cl ON cl.id = e.class_id
     JOIN teachers t ON cl.teacher_id = t.id
     JOIN courses c ON cl.course_id = c.id
+    JOIN institutes i ON c.institute_id = i.id
+    JOIN departments d ON c.department_id = d.id
     ${whereClauses}
     ORDER BY e.created_at DESC
     LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
