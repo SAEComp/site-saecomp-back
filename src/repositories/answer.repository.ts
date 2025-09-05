@@ -139,31 +139,6 @@ export async function findPublicAnswers(params: GetPublicAnswersParams) {
         queryParams.push(courseId);
     }
 
-    //     const listQuery = `
-    //     SELECT
-    //       e.id AS "evaluationId", t.name AS "teacherName", t.id AS "teacherId",
-    //       c.name AS "courseName", c.code AS "courseCode", e.score::FLOAT AS "score",
-    //       i.name AS "instituteName", i.code AS "instituteCode",
-    //       d.name AS "departmentName", d.code AS "departmentCode"
-    //     FROM evaluations e
-    //     JOIN classes cl ON cl.id = e.class_id
-    //     JOIN teachers t ON cl.teacher_id = t.id
-    //     JOIN courses c ON cl.course_id = c.id
-    //     JOIN institutes i ON c.institute_id = i.id
-    //     JOIN departments d ON c.department_id = d.id
-    //     ${whereClauses}
-    //     ORDER BY e.created_at DESC
-    //     LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
-    //   `;
-    //     const listParams = [...queryParams, pageSize + 1, offset];
-    //     const { rows: evaluationRows } = await pool.query<PublicAnswer>(listQuery, listParams);
-
-    //     const scoreQuery = `
-    //     SELECT AVG(e.score)::FLOAT AS "overallScore"
-    //     FROM evaluations e
-    //     JOIN classes cl ON cl.id = e.class_id
-    //     ${whereClauses};
-    //     `;
 
     const listQuery = `
         select
@@ -216,70 +191,6 @@ export async function findPublicAnswers(params: GetPublicAnswersParams) {
 }
 
 export async function findPublicAnswerDetails(classId: number) {
-    //     const evaluationQuery = `
-    //     SELECT
-    //         e.id AS "evaluationId",
-    //         t.name AS "teacherName",
-    //         t.id AS "teacherId",
-    //         c.name AS "courseName",
-    //         c.code AS "courseCode",
-    //         c.id AS "courseId",
-    //         i.name AS "instituteName",
-    //         i.code AS "instituteCode",
-    //         d.name AS "departmentName",
-    //         d.code AS "departmentCode"
-    //     FROM evaluations e
-    //     JOIN classes cl ON cl.id = e.class_id
-    //     JOIN teachers t ON cl.teacher_id = t.id
-    //     JOINf  courses c ON cl.course_id = c.id
-    //     JOIN institutes i ON c.institute_id = i.id
-    //     JOIN departments d ON c.department_id = d.id
-    //     WHERE e.id = $1 AND e.status = 'approved'
-    // //   `;
-    // const evaluationQuery = `
-    //     select
-    //     e.id as "evaluationId",
-    //     t.name as "teacherName",
-    //     t.id as "teacherId",
-    //     c.name as "courseName",
-    //     c.code as "courseCode",
-    //     c.id as "courseId",
-    //     i.name as "instituteName",
-    //     i.code as "instituteCode",
-    //     d.name as "departmentName",
-    //     d.code as "departmentCode"
-    // from
-    //     evaluations e
-    // join classes cl on
-    //     cl.id = e.class_id
-    // join teachers t on
-    //     cl.teacher_id = t.id
-    //     JOIN courses c on
-    //     cl.course_id = c.id
-    // join institutes i on
-    //     c.institute_id = i.id
-    // join departments d on
-    //     c.department_id = d.id
-    //     WHERE e.id = ${classId} AND e.status = 'approved'
-    //  `;
-
-    // const evaluationResult = await pool.query<PublicEvaluationDetails>(evaluationQuery, [classId]);
-
-    // if (evaluationResult.rows.length === 0) throw new ApiError(404, "Avaliação não encontrada ou não aprovada.");
-
-    // const evaluationDetails = evaluationResult.rows[0];
-
-    //     const answersQuery = `
-    //     SELECT
-    //         q.id AS "questionId",
-    //         q.type AS "questionType",
-    //         q.question,
-    //         COALESCE(a.edited_answer, a.answer) AS "answer"
-    //     FROM answers a
-    //     JOIN questions q ON a.question_id = q.id
-    //     WHERE a.evaluation_id = $1
-    //     ORDER BY a.question_order ASC, q.id ASC
-    //   `;
 
     const answersQuery =
         `select
