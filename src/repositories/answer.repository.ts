@@ -131,89 +131,182 @@ export async function findPublicAnswers(params: GetPublicAnswersParams) {
     let whereClauses = "WHERE e.status = 'approved'";
 
     if (teacherId) {
-        whereClauses += ` AND cl.teacher_id = $${queryParams.length + 1}`;
+        whereClauses += ` AND c.teacher_id = $${queryParams.length + 1}`;
         queryParams.push(teacherId);
     }
     if (courseId) {
-        whereClauses += ` AND cl.course_id = $${queryParams.length + 1}`;
+        whereClauses += ` AND co.id = $${queryParams.length + 1}`;
         queryParams.push(courseId);
     }
 
+    //     const listQuery = `
+    //     SELECT
+    //       e.id AS "evaluationId", t.name AS "teacherName", t.id AS "teacherId",
+    //       c.name AS "courseName", c.code AS "courseCode", e.score::FLOAT AS "score",
+    //       i.name AS "instituteName", i.code AS "instituteCode",
+    //       d.name AS "departmentName", d.code AS "departmentCode"
+    //     FROM evaluations e
+    //     JOIN classes cl ON cl.id = e.class_id
+    //     JOIN teachers t ON cl.teacher_id = t.id
+    //     JOIN courses c ON cl.course_id = c.id
+    //     JOIN institutes i ON c.institute_id = i.id
+    //     JOIN departments d ON c.department_id = d.id
+    //     ${whereClauses}
+    //     ORDER BY e.created_at DESC
+    //     LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
+    //   `;
+    //     const listParams = [...queryParams, pageSize + 1, offset];
+    //     const { rows: evaluationRows } = await pool.query<PublicAnswer>(listQuery, listParams);
+
+    //     const scoreQuery = `
+    //     SELECT AVG(e.score)::FLOAT AS "overallScore"
+    //     FROM evaluations e
+    //     JOIN classes cl ON cl.id = e.class_id
+    //     ${whereClauses};
+    //     `;
+
     const listQuery = `
-    SELECT
-      e.id AS "evaluationId", t.name AS "teacherName", t.id AS "teacherId",
-      c.name AS "courseName", c.code AS "courseCode", e.score::FLOAT AS "score",
-      i.name AS "instituteName", i.code AS "instituteCode",
-      d.name AS "departmentName", d.code AS "departmentCode"
-    FROM evaluations e
-    JOIN classes cl ON cl.id = e.class_id
-    JOIN teachers t ON cl.teacher_id = t.id
-    JOIN courses c ON cl.course_id = c.id
-    JOIN institutes i ON c.institute_id = i.id
-    JOIN departments d ON c.department_id = d.id
-    ${whereClauses}
-    ORDER BY e.created_at DESC
-    LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
-  `;
+        select
+            c.id as "classId",
+            c.teacher_id as "teacherId",
+            t.name as "teacherName",
+            co."name" as "courseName",
+            co.code as "courseCode",
+            co.id as "courseId",
+            i."name" as "instituteName",
+            i.code as "instituteCode",
+            d."name" as "departmentName",
+            d.code as "departmentCode",
+            AVG(e.score)::FLOAT as "averageScore",
+            s.code as "semesterCode"
+        from
+            classes c
+        join evaluations e on
+            e.class_id = c.id
+        join teachers t on
+            t.id = c.teacher_id
+        join courses co on
+            co.id = c.course_id
+        join departments d on
+            d.id  = co.department_id 
+        join institutes i on
+            i.id = co.institute_id 
+        join semesters s on
+	        s.id = c.semester_id 
+        ${whereClauses}
+        group by
+            c.id,
+            t."name",
+            co.id,
+            i."name",
+            i."code",
+            d."name",
+            d."code",
+            s."code"
+        LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
+        `
+
     const listParams = [...queryParams, pageSize + 1, offset];
     const { rows: evaluationRows } = await pool.query<PublicAnswer>(listQuery, listParams);
 
-    const scoreQuery = `
-    SELECT AVG(e.score)::FLOAT AS "overallScore"
-    FROM evaluations e
-    JOIN classes cl ON cl.id = e.class_id
-    ${whereClauses};
-    `;
-
-    const scoreResult = await pool.query(scoreQuery, queryParams);
-
-    const score = scoreResult.rows[0]?.overallScore ? parseFloat(scoreResult.rows[0].overallScore) : null;
-
     const isLastPage = evaluationRows.length <= pageSize;
-    const evaluations = evaluationRows.slice(0, pageSize);
+    const teacherGeneralInfo = evaluationRows.slice(0, pageSize);
 
-    return { isLastPage, score, evaluations };
+    return { isLastPage, teacherGeneralInfo };
 }
 
-export async function findPublicAnswerDetails(evaluationId: number) {
-    const evaluationQuery = `
-    SELECT
-        e.id AS "evaluationId",
-        t.name AS "teacherName",
-        t.id AS "teacherId",
-        c.name AS "courseName",
-        c.code AS "courseCode",
-        c.id AS "courseId",
-        i.name AS "instituteName",
-        i.code AS "instituteCode",
-        d.name AS "departmentName",
-        d.code AS "departmentCode"
-    FROM evaluations e
-    JOIN classes cl ON cl.id = e.class_id
-    JOIN teachers t ON cl.teacher_id = t.id
-    JOIN courses c ON cl.course_id = c.id
-    JOIN institutes i ON c.institute_id = i.id
-    JOIN departments d ON c.department_id = d.id
-    WHERE e.id = $1 AND e.status = 'approved'
-  `;
-    const evaluationResult = await pool.query<PublicEvaluationDetails>(evaluationQuery, [evaluationId]);
+export async function findPublicAnswerDetails(classId: number) {
+    //     const evaluationQuery = `
+    //     SELECT
+    //         e.id AS "evaluationId",
+    //         t.name AS "teacherName",
+    //         t.id AS "teacherId",
+    //         c.name AS "courseName",
+    //         c.code AS "courseCode",
+    //         c.id AS "courseId",
+    //         i.name AS "instituteName",
+    //         i.code AS "instituteCode",
+    //         d.name AS "departmentName",
+    //         d.code AS "departmentCode"
+    //     FROM evaluations e
+    //     JOIN classes cl ON cl.id = e.class_id
+    //     JOIN teachers t ON cl.teacher_id = t.id
+    //     JOINf  courses c ON cl.course_id = c.id
+    //     JOIN institutes i ON c.institute_id = i.id
+    //     JOIN departments d ON c.department_id = d.id
+    //     WHERE e.id = $1 AND e.status = 'approved'
+    // //   `;
+    // const evaluationQuery = `
+    //     select
+    //     e.id as "evaluationId",
+    //     t.name as "teacherName",
+    //     t.id as "teacherId",
+    //     c.name as "courseName",
+    //     c.code as "courseCode",
+    //     c.id as "courseId",
+    //     i.name as "instituteName",
+    //     i.code as "instituteCode",
+    //     d.name as "departmentName",
+    //     d.code as "departmentCode"
+    // from
+    //     evaluations e
+    // join classes cl on
+    //     cl.id = e.class_id
+    // join teachers t on
+    //     cl.teacher_id = t.id
+    //     JOIN courses c on
+    //     cl.course_id = c.id
+    // join institutes i on
+    //     c.institute_id = i.id
+    // join departments d on
+    //     c.department_id = d.id
+    //     WHERE e.id = ${classId} AND e.status = 'approved'
+    //  `;
 
-    if (evaluationResult.rows.length === 0) throw new ApiError(404, "Avaliação não encontrada ou não aprovada.");
+    // const evaluationResult = await pool.query<PublicEvaluationDetails>(evaluationQuery, [classId]);
 
-    const evaluationDetails = evaluationResult.rows[0];
+    // if (evaluationResult.rows.length === 0) throw new ApiError(404, "Avaliação não encontrada ou não aprovada.");
 
-    const answersQuery = `
-    SELECT
-        q.id AS "questionId",
-        q.type AS "questionType",
-        q.question,
-        COALESCE(a.edited_answer, a.answer) AS "answer"
-    FROM answers a
-    JOIN questions q ON a.question_id = q.id
-    WHERE a.evaluation_id = $1
-    ORDER BY a.question_order ASC, q.id ASC
-  `;
-    const answersResult = await pool.query<PublicAnswerDetails>(answersQuery, [evaluationId]);
+    // const evaluationDetails = evaluationResult.rows[0];
 
-    return { ...evaluationDetails, answers: answersResult.rows };
+    //     const answersQuery = `
+    //     SELECT
+    //         q.id AS "questionId",
+    //         q.type AS "questionType",
+    //         q.question,
+    //         COALESCE(a.edited_answer, a.answer) AS "answer"
+    //     FROM answers a
+    //     JOIN questions q ON a.question_id = q.id
+    //     WHERE a.evaluation_id = $1
+    //     ORDER BY a.question_order ASC, q.id ASC
+    //   `;
+
+    const answersQuery =
+        `select
+	c.id as "classId",
+	e.id as "evaluationId",
+	q.id as "questionId",
+	q."type" as "questionType",
+	q.question as "question",
+	a.answer as "answerText"
+from
+	classes c
+join evaluations e on
+	e.class_id = c.id
+join answers a on
+a.evaluation_id = e.id
+join questions q on
+q.id = a.question_id 
+where
+	c.id = $1 and e.status = 'approved'`
+
+    const { rows: answersResult } = await pool.query<PublicAnswerDetails>(answersQuery, [classId]);
+
+    try {
+        return { answers: answersResult };
+    } catch (error) {
+
+        console.error("Erro de validação dos dados do banco:", error);
+        throw new Error("Os dados recebidos do banco de dados são inválidos.");
+    }
 }
