@@ -3,7 +3,7 @@ import { IAnswer, IEvaluation } from "../schemas/teacherEvaluation/input/evaluat
 import { Classes } from "../schemas/teacherEvaluation/output/evaluation.schema";
 import { Teacher, Course } from "../schemas/teacherEvaluation/output/evaluation.schema";
 
-export async function findClasses(idealYear?: number): Promise<Classes[]> {
+/*export async function findClasses(idealYear?: number): Promise<Classes[]> {
     let query = `
         SELECT 
             cl.id as "classId",
@@ -31,6 +31,35 @@ export async function findClasses(idealYear?: number): Promise<Classes[]> {
         query += ` WHERE s.code = $1`;
         params.push(`${year}-${semester}`);
     }
+
+    const { rows } = await pool.query<Classes>(query, params);
+    return rows;
+}*/
+
+export async function findClasses(idealYear?: number): Promise<Classes[]> {
+    let query = `
+        SELECT 
+            cl.id as "classId",
+            t.id as "teacherId", 
+            t.name as "teacherName", 
+            c.id as "courseId", 
+            c.name as "courseName", 
+            c.code as "courseCode",
+            s.code as "semesterCode"
+        FROM classes cl
+        JOIN teachers t ON t.id = cl.teacher_id
+        JOIN courses c ON c.id = cl.course_id
+        JOIN semesters s ON s.id = cl.semester_id
+        WHERE s.code = '2025-2'
+    `;
+    const params: any[] = [];
+
+    if (idealYear) {
+        // query += " WHERE (cl.ideal_year = $1)";
+        query += " AND cl.ideal_year = $1";
+        params.push(idealYear);
+    } 
+    query += " ORDER BY s.code DESC, c.name ASC";
 
     const { rows } = await pool.query<Classes>(query, params);
     return rows;
