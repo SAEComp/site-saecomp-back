@@ -4,3 +4,10 @@ dist/
 keys
 dump.dump
 *.dump
+dist/
+build/
+npm-debug.log*
+*.log
+dados/
+test-db.ts
+buscar-disciplina.ts
