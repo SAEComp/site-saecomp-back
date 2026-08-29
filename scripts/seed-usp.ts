@@ -7,7 +7,6 @@ async function seedUspData() {
     console.log('🚀 Iniciando a importação de dados da USP...');
 
     // 1. Ler o arquivo db.json (que o script python gerou)
-    // Supondo que ele esteja na pasta raiz, dentro de uma pasta 'dados'
     const filePath = path.join(__dirname, '../dados/db.json');
     if (!fs.existsSync(filePath)) {
         console.error('❌ Erro: Arquivo db.json não encontrado no caminho:', filePath);
@@ -51,13 +50,11 @@ async function seedUspData() {
             // ==========================================
             let instituteId = null;
             if (disciplina.unidade) {
-                // Tenta encontrar o instituto pelo nome
                 const instRes = await pool.query(`SELECT id FROM institutes WHERE name = $1`, [disciplina.unidade]);
                 
                 if (instRes.rows.length > 0) {
                     instituteId = instRes.rows[0].id;
                 } else {
-                    // Se não existir, cria o instituto
                     const newInst = await pool.query(
                         `INSERT INTO institutes (name) VALUES ($1) RETURNING id`,
                         [disciplina.unidade]
@@ -68,13 +65,11 @@ async function seedUspData() {
 
             let departmentId = null;
             if (disciplina.departamento) {
-                // Tenta encontrar o departamento pelo nome
                 const deptRes = await pool.query(`SELECT id FROM departments WHERE name = $1`, [disciplina.departamento]);
                 
                 if (deptRes.rows.length > 0) {
                     departmentId = deptRes.rows[0].id;
                 } else {
-                    // Se não existir, cria o departamento já passando o ID do Instituto!
                     const newDept = await pool.query(
                         `INSERT INTO departments (name, institute_id) VALUES ($1, $2) RETURNING id`,
                         [disciplina.departamento, instituteId]
@@ -90,9 +85,8 @@ async function seedUspData() {
             const courseRes = await pool.query(`SELECT id FROM courses WHERE code = $1`, [disciplina.codigo]);
             
             if (courseRes.rows.length > 0) {
-                courseId = courseRes.rows[0].id; // Já existe, só pega o ID
+                courseId = courseRes.rows[0].id;
             } else {
-                // Não existe, então insere passando também o department_id E institute_id
                 const newCourse = await pool.query(
                     `INSERT INTO courses (code, name, department_id, institute_id) VALUES ($1, $2, $3, $4) RETURNING id`,
                     [disciplina.codigo, disciplina.nome, departmentId, instituteId]
@@ -103,6 +97,23 @@ async function seedUspData() {
             if (!disciplina.turmas) continue;
 
             for (const turma of disciplina.turmas) {
+                
+                // ==========================================
+                // NOVO: ETAPA DE FILTRAGEM DA ENGENHARIA DE COMPUTAÇÃO
+                // ==========================================
+                // Transforma o objeto da turma em texto para varrer todas as propriedades (reservas, observações, etc)
+                const turmaTexto = JSON.stringify(turma).toLowerCase();
+                
+                // Verifica se a turma cita o código 55041 ou o nome do curso
+                const ehDaComputacao = turmaTexto.includes('55041') || 
+                                       turmaTexto.includes('engenharia de computação') || 
+                                       turmaTexto.includes('engenharia de computacao');
+
+                if (!ehDaComputacao) {
+                    // Ignora essa turma e vai para a próxima
+                    continue; 
+                }
+
                 if (!turma.horario) continue;
 
                 for (const aula of turma.horario) {
@@ -139,7 +150,7 @@ async function seedUspData() {
                                 `INSERT INTO classes (course_id, teacher_id, semester_id) VALUES ($1, $2, $3)`,
                                 [courseId, teacherId, semesterId]
                             );
-                            console.log(`  -> Vinculado: Prof. ${nomeProfessor}`);
+                            console.log(`  -> Vinculado: Prof. ${nomeProfessor} (Turma Eng. Comp)`);
                         }
                     }
                 }
@@ -149,7 +160,6 @@ async function seedUspData() {
     } catch (error) {
         console.error('❌ Erro durante a injeção no banco:', error);
     } finally {
-        // Encerra o pool para o script não ficar travado no terminal
         await pool.end();
     }
 }
